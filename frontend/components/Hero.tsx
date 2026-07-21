@@ -76,11 +76,14 @@ export default function Hero() {
               href="#pricing"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.98 }}
-              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-7 py-4 font-semibold text-[#050816] shadow-xl shadow-white/10 transition hover:bg-white/90"
+              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-7 py-4 font-semibold shadow-xl shadow-white/10 transition hover:bg-white/90"
+              style={{ color: "#050816" }}
             >
-              Start for free
+              <span style={{ color: "#050816" }}>Start for free</span>
+
               <ArrowRight
                 size={18}
+                color="#050816"
                 className="transition-transform group-hover:translate-x-1"
               />
             </motion.a>
@@ -133,6 +136,7 @@ export default function Hero() {
 
                 <div>
                   <p className="text-sm text-white/45">Career workspace</p>
+
                   <h2 className="font-semibold text-white">
                     Good afternoon, Alex
                   </h2>
@@ -241,7 +245,10 @@ export default function Hero() {
 
                 <div>
                   <p className="text-xs text-white/45">Interview rate</p>
-                  <p className="text-sm font-semibold text-white">+34% this month</p>
+
+                  <p className="text-sm font-semibold text-white">
+                    +34% this month
+                  </p>
                 </div>
               </div>
             </motion.div>
@@ -262,6 +269,7 @@ export default function Hero() {
 
                 <div>
                   <p className="text-xs text-white/45">Latest application</p>
+
                   <p className="text-sm font-semibold text-white">
                     ATS score: 91%
                   </p>
@@ -324,7 +332,9 @@ function Metric({ value, label }: { value: string; label: string }) {
   return (
     <div>
       <p className="text-xl font-semibold text-white sm:text-2xl">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-white/40 sm:text-sm">{label}</p>
+      <p className="mt-1 text-xs leading-5 text-white/40 sm:text-sm">
+        {label}
+      </p>
     </div>
   );
 }
