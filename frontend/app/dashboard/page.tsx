@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import DashboardJobMatchCard from "@/components/dashboard/DashboardJobMatchCard";
 import { useState } from "react";
 
 const navigationItems = [
@@ -33,31 +34,37 @@ const navigationItems = [
   },
   {
     label: "Resume Builder",
-    href: "#",
+    href: "/resume-builder",
     icon: FileText,
     active: false,
   },
   {
+    label: "AI Resume Writer",
+    href: "/ai-resume",
+    icon: WandSparkles,
+    active: false,
+  },
+  {
     label: "ATS Optimizer",
-    href: "#",
+    href: "/job-matching",
     icon: Target,
     active: false,
   },
   {
     label: "Interview Coach",
-    href: "#",
+    href: "/interview-prep",
     icon: MessageSquareText,
     active: false,
   },
   {
     label: "Job Matches",
-    href: "#",
+    href: "/job-matching",
     icon: BriefcaseBusiness,
     active: false,
   },
   {
     label: "Applications",
-    href: "#",
+    href: "/job-tracker",
     icon: FileCheck2,
     active: false,
   },
@@ -155,6 +162,7 @@ export default function DashboardPage() {
 
           <button
             type="button"
+            aria-label="Close sidebar"
             onClick={() => setSidebarOpen(false)}
             className="rounded-xl p-2 text-white/50 transition hover:bg-white/5 hover:text-white lg:hidden"
           >
@@ -210,6 +218,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
+                aria-label="Open sidebar"
                 onClick={() => setSidebarOpen(true)}
                 className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-white/70 lg:hidden"
               >
@@ -233,6 +242,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
+                aria-label="Notifications"
                 className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:bg-white/[0.07] hover:text-white"
               >
                 <Bell size={19} />
@@ -466,6 +476,7 @@ export default function DashboardPage() {
                         <td className="px-6 py-5">
                           <button
                             type="button"
+                            aria-label={`More options for ${application.company}`}
                             className="rounded-xl p-2 text-white/35 transition hover:bg-white/5 hover:text-white"
                           >
                             <MoreHorizontal size={18} />
@@ -490,6 +501,7 @@ export default function DashboardPage() {
 
                 <button
                   type="button"
+                  aria-label="Open calendar"
                   className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-white/45 transition hover:text-white"
                 >
                   <CalendarDays size={18} />
@@ -538,6 +550,7 @@ export default function DashboardPage() {
 
           <section className="mt-6 grid gap-4 md:grid-cols-3">
             <QuickAction
+              href="/resume-builder"
               icon={FileText}
               title="Build a tailored CV"
               description="Create a role-specific CV using AI-assisted recommendations."
@@ -545,13 +558,15 @@ export default function DashboardPage() {
             />
 
             <QuickAction
+              href="/job-matching"
               icon={Target}
               title="Check your ATS score"
               description="Compare your CV against a job description and identify gaps."
-              buttonText="Analyze CV"
+              buttonText="Analyse CV"
             />
 
             <QuickAction
+              href="/interview-prep"
               icon={CircleUserRound}
               title="Practice an interview"
               description="Generate realistic interview questions for your target role."
@@ -641,35 +656,39 @@ function ProfileItem({
 }
 
 function QuickAction({
+  href,
   icon: Icon,
   title,
   description,
   buttonText,
 }: {
+  href: string;
   icon: typeof FileText;
   title: string;
   description: string;
   buttonText: string;
 }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.035] p-5">
+    <article className="rounded-[24px] border border-white/10 bg-white/[0.035] p-5">
       <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-400/10 text-violet-300">
         <Icon size={20} />
       </span>
 
-      <h3 className="mt-5 text-lg font-semibold">{title}</h3>
+      <h3 className="mt-5 text-lg font-semibold">
+        {title}
+      </h3>
 
       <p className="mt-2 min-h-[48px] text-sm leading-6 text-white/40">
         {description}
       </p>
 
-      <button
-        type="button"
+      <Link
+        href={href}
         className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-violet-300 transition hover:text-violet-200"
       >
         {buttonText}
         <ArrowUpRight size={16} />
-      </button>
-    </div>
+      </Link>
+    </article>
   );
 }

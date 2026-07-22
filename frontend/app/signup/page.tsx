@@ -5,41 +5,115 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  LoaderCircle,
   LockKeyhole,
   Mail,
   Sparkles,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
+import { createClient } from "@/lib/supabase/client";
+
+type FormData = {
+  fullName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+};
+
+const initialFormData: FormData = {
+  fullName: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+};
+
 export default function SignupPage() {
+  const router = useRouter();
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match.");
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    const fullName = formData.fullName.trim();
+    const email = formData.email.trim().toLowerCase();
+
+    if (!fullName) {
+      setErrorMessage("Please enter your full name.");
       return;
     }
 
-    console.log(formData);
+    if (formData.password.length < 8) {
+      setErrorMessage("Your password must contain at least 8 characters.");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const supabase = createClient();
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      if (data.session) {
+        router.replace("/dashboard");
+        router.refresh();
+        return;
+      }
+
+      setFormData(initialFormData);
+      setSuccessMessage(
+        "Account created successfully. Check your email and confirm your account before signing in.",
+      );
+    } catch {
+      setErrorMessage(
+        "Unable to create your account right now. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
-  function updateField(field: keyof typeof formData, value: string) {
+  function updateField(field: keyof FormData, value: string) {
     setFormData((current) => ({
       ...current,
       [field]: value,
     }));
+
+    if (errorMessage) {
+      setErrorMessage("");
+    }
   }
 
   return (
@@ -58,10 +132,7 @@ export default function SignupPage() {
         <div className="grid w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.045] shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:grid-cols-[0.95fr_1.05fr]">
           <section className="hidden border-r border-white/10 bg-white/[0.025] p-12 lg:flex lg:flex-col lg:justify-between">
             <div>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-3 text-white"
-              >
+              <Link href="/" className="inline-flex items-center gap-3 text-white">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[#050816]">
                   <Sparkles size={21} />
                 </span>
@@ -131,6 +202,24 @@ export default function SignupPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                {errorMessage ? (
+                  <div
+                    role="alert"
+                    className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm leading-6 text-red-200"
+                  >
+                    {errorMessage}
+                  </div>
+                ) : null}
+
+                {successMessage ? (
+                  <div
+                    role="status"
+                    className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm leading-6 text-emerald-200"
+                  >
+                    {successMessage}
+                  </div>
+                ) : null}
+
                 <div>
                   <label
                     htmlFor="fullName"
@@ -147,15 +236,17 @@ export default function SignupPage() {
 
                     <input
                       id="fullName"
+                      name="fullName"
                       type="text"
                       required
                       autoComplete="name"
+                      disabled={isSubmitting}
                       value={formData.fullName}
                       onChange={(event) =>
                         updateField("fullName", event.target.value)
                       }
                       placeholder="Alex Morgan"
-                      className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.045] pl-12 pr-4 text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/60 focus:bg-white/[0.065]"
+                      className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.045] pl-12 pr-4 text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/60 focus:bg-white/[0.065] disabled:cursor-not-allowed disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -176,15 +267,18 @@ export default function SignupPage() {
 
                     <input
                       id="email"
+                      name="email"
                       type="email"
                       required
                       autoComplete="email"
+                      inputMode="email"
+                      disabled={isSubmitting}
                       value={formData.email}
                       onChange={(event) =>
                         updateField("email", event.target.value)
                       }
                       placeholder="you@example.com"
-                      className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.045] pl-12 pr-4 text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/60 focus:bg-white/[0.065]"
+                      className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.045] pl-12 pr-4 text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/60 focus:bg-white/[0.065] disabled:cursor-not-allowed disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -205,25 +299,30 @@ export default function SignupPage() {
 
                     <input
                       id="password"
+                      name="password"
                       type={showPassword ? "text" : "password"}
                       required
                       minLength={8}
                       autoComplete="new-password"
+                      disabled={isSubmitting}
                       value={formData.password}
                       onChange={(event) =>
                         updateField("password", event.target.value)
                       }
                       placeholder="Minimum 8 characters"
-                      className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.045] pl-12 pr-12 text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/60 focus:bg-white/[0.065]"
+                      className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.045] pl-12 pr-12 text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/60 focus:bg-white/[0.065] disabled:cursor-not-allowed disabled:opacity-60"
                     />
 
                     <button
                       type="button"
-                      onClick={() => setShowPassword((current) => !current)}
+                      disabled={isSubmitting}
+                      onClick={() =>
+                        setShowPassword((current) => !current)
+                      }
                       aria-label={
                         showPassword ? "Hide password" : "Show password"
                       }
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 transition hover:text-white"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {showPassword ? (
                         <EyeOff size={18} />
@@ -250,20 +349,23 @@ export default function SignupPage() {
 
                     <input
                       id="confirmPassword"
+                      name="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
                       required
                       minLength={8}
                       autoComplete="new-password"
+                      disabled={isSubmitting}
                       value={formData.confirmPassword}
                       onChange={(event) =>
                         updateField("confirmPassword", event.target.value)
                       }
                       placeholder="Enter your password again"
-                      className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.045] pl-12 pr-12 text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/60 focus:bg-white/[0.065]"
+                      className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.045] pl-12 pr-12 text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/60 focus:bg-white/[0.065] disabled:cursor-not-allowed disabled:opacity-60"
                     />
 
                     <button
                       type="button"
+                      disabled={isSubmitting}
                       onClick={() =>
                         setShowConfirmPassword((current) => !current)
                       }
@@ -272,7 +374,7 @@ export default function SignupPage() {
                           ? "Hide confirmation password"
                           : "Show confirmation password"
                       }
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 transition hover:text-white"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {showConfirmPassword ? (
                         <EyeOff size={18} />
@@ -287,7 +389,8 @@ export default function SignupPage() {
                   <input
                     type="checkbox"
                     required
-                    className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5 accent-violet-500"
+                    disabled={isSubmitting}
+                    className="mt-1 h-4 w-4 rounded border-white/20 bg-white/5 accent-violet-500 disabled:cursor-not-allowed"
                   />
 
                   <span>
@@ -311,25 +414,41 @@ export default function SignupPage() {
 
                 <button
                   type="submit"
-                  className="h-14 w-full rounded-2xl bg-white font-semibold text-[#050816] transition hover:bg-white/90"
+                  disabled={isSubmitting}
+                  className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-[#050816] transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Create account
+                  {isSubmitting ? (
+                    <>
+                      <LoaderCircle
+                        size={19}
+                        className="animate-spin"
+                        aria-hidden="true"
+                      />
+                      Creating account...
+                    </>
+                  ) : (
+                    "Create account"
+                  )}
                 </button>
               </form>
 
               <div className="my-7 flex items-center gap-4">
                 <div className="h-px flex-1 bg-white/10" />
+
                 <span className="text-xs uppercase tracking-[0.18em] text-white/30">
                   or
                 </span>
+
                 <div className="h-px flex-1 bg-white/10" />
               </div>
 
               <button
                 type="button"
-                className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.04] font-medium text-white transition hover:bg-white/[0.08]"
+                disabled
+                title="Google authentication will be added soon"
+                className="h-14 w-full cursor-not-allowed rounded-2xl border border-white/10 bg-white/[0.04] font-medium text-white/40"
               >
-                Continue with Google
+                Continue with Google — coming soon
               </button>
 
               <p className="mt-7 text-center text-sm text-white/50">

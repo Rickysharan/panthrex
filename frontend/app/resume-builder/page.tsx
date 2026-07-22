@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import AiResumeWriterPanel from "@/components/resume-builder/AiResumeWriterPanel";
 import CertificationsForm from "@/components/resume-builder/CertificationsForm";
@@ -37,7 +37,10 @@ import "./print.css";
 
 export default function ResumeBuilderPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [enhancementError, setEnhancementError] =
+    useState("");
+  
   const {
     resumeData,
     lastSavedAt,
@@ -58,8 +61,113 @@ export default function ResumeBuilderPage() {
     addCertification,
     updateCertification,
     removeCertification,
+    importParsedResume,
+    applyEnhancementSuggestions,
     resetResume,
   } = useResumeBuilder();
+
+  useEffect(() => {
+    const importedResume =
+      window.sessionStorage.getItem(
+        "panthrex-imported-resume",
+      );
+
+    if (!importedResume) {
+      return;
+    }
+
+    try {
+      const parsedResume = JSON.parse(importedResume);
+
+      importParsedResume(parsedResume);
+
+      window.sessionStorage.removeItem(
+        "panthrex-imported-resume",
+      );
+    } catch (error) {
+      console.error(
+        "Unable to import the parsed resume.",
+        error,
+      );
+    }
+  }, [importParsedResume]);
+
+  useEffect(() => {
+    const storedSuggestions =
+      window.sessionStorage.getItem(
+        "panthrex-accepted-enhancements",
+      );
+
+    if (!storedSuggestions) {
+      return;
+    }
+
+    try {
+      applyEnhancementSuggestions(
+        JSON.parse(storedSuggestions),
+      );
+
+      window.sessionStorage.removeItem(
+        "panthrex-accepted-enhancements",
+      );
+    } catch (error) {
+      console.error(
+        "Unable to apply AI resume enhancements.",
+        error,
+      );
+    }
+  }, [applyEnhancementSuggestions]);
+
+  async function handleEnhanceResume() {
+  if (isEnhancing) {
+    return;
+  }
+
+  setIsEnhancing(true);
+  setEnhancementError("");
+
+  try {
+    const response = await fetch(
+      "/api/ai-resume-enhancer",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resume: resumeData,
+          targetRole:
+            resumeData.personalDetails.jobTitle,
+        }),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.details ||
+          data.error ||
+          "The resume could not be enhanced.",
+      );
+    }
+
+    window.sessionStorage.setItem(
+      "panthrex-resume-enhancements",
+      JSON.stringify(data),
+    );
+
+    window.location.href = "/resume-enhancer";
+  } catch (error) {
+    setEnhancementError(
+      error instanceof Error
+        ? error.message
+        : "The resume could not be enhanced.",
+    );
+  } finally {
+    setIsEnhancing(false);
+  }
+}
 
   const savedStatus = lastSavedAt
     ? `Saved at ${lastSavedAt.toLocaleTimeString([], {

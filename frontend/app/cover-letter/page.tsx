@@ -1,324 +1,496 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import CompanyForm from "@/components/cover-letter/CompanyForm";
-import CoverLetterEditor from "@/components/cover-letter/CoverLetterEditor";
-import CoverLetterPreview from "@/components/cover-letter/CoverLetterPreview";
-import ExportPdfButton from "@/components/cover-letter/ExportPdfButton";
-import GenerateButton from "@/components/cover-letter/GenerateButton";
-import TemplateSelector from "@/components/cover-letter/TemplateSelector";
-import type { CoverLetterContent } from "@/lib/cover-letter/types";
-import { useCoverLetter } from "@/lib/cover-letter/useCoverLetter";
+import type {
+  CoverLetterApiError,
+  CoverLetterApiResponse,
+  CoverLetterLength,
+  CoverLetterTone,
+  GeneratedCoverLetter,
+} from "@/lib/ai-cover-letter/types";
+import { useResumeBuilder } from "@/lib/resume/useResumeBuilder";
 
-interface GenerateCoverLetterResponse {
-  success?: boolean;
-  coverLetter?: string;
-  error?: string;
-}
+const toneOptions: Array<{
+  value: CoverLetterTone;
+  label: string;
+}> = [
+  { value: "professional", label: "Professional" },
+  { value: "confident", label: "Confident" },
+  { value: "concise", label: "Concise" },
+  { value: "enthusiastic", label: "Enthusiastic" },
+  { value: "technical", label: "Technical" },
+];
 
-const COVER_LETTER_PREVIEW_ID =
-  "cover-letter-preview";
+const lengthOptions: Array<{
+  value: CoverLetterLength;
+  label: string;
+}> = [
+  { value: "short", label: "Short" },
+  { value: "standard", label: "Standard" },
+  { value: "detailed", label: "Detailed" },
+];
 
-function splitCoverLetter(
-  generatedLetter: string,
-): CoverLetterContent {
-  const cleanedLetter = generatedLetter
-    .replace(/\r/g, "")
-    .trim();
+const STORAGE_KEY = "panthrex-generated-cover-letters";
 
-  const paragraphs = cleanedLetter
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean);
+function saveCoverLetter(coverLetter: GeneratedCoverLetter): void {
+  try {
+    const existingValue = window.localStorage.getItem(STORAGE_KEY);
 
-  if (paragraphs.length >= 3) {
-    return {
-      introduction: paragraphs[0],
-      body: paragraphs.slice(1, -1).join("\n\n"),
-      closing: paragraphs[paragraphs.length - 1],
-    };
+    const existingLetters: GeneratedCoverLetter[] = existingValue
+      ? JSON.parse(existingValue)
+      : [];
+
+    const updatedLetters = [
+      coverLetter,
+      ...existingLetters.filter(
+        (item) => item.id !== coverLetter.id,
+      ),
+    ];
+
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(updatedLetters),
+    );
+  } catch (error) {
+    console.error("Failed to save cover letter locally:", error);
   }
-
-  if (paragraphs.length === 2) {
-    return {
-      introduction: paragraphs[0],
-      body: paragraphs[1],
-      closing:
-        "Thank you for considering my application. I would welcome the opportunity to discuss how my skills and experience can contribute to your team.",
-    };
-  }
-
-  return {
-    introduction: cleanedLetter,
-    body: "",
-    closing:
-      "Thank you for considering my application. I look forward to the opportunity to discuss my suitability for the role.",
-  };
-}
-
-function createPdfFileName(
-  companyName: string,
-  jobTitle: string,
-) {
-  const baseName = [
-    companyName.trim(),
-    jobTitle.trim(),
-    "Cover Letter",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  const safeName = (
-    baseName || "Panthrex Cover Letter"
-  )
-    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "")
-    .replace(/\s+/g, "_");
-
-  return `${safeName}.pdf`;
 }
 
 export default function CoverLetterPage() {
-  const {
-    coverLetterData,
-    lastSavedAt,
-    hasLoadedStorage,
-    updateCompany,
-    updateTemplate,
-    updateContent,
-    updateGenerationOptions,
-    replaceContent,
-    resetCoverLetter,
-  } = useCoverLetter();
+  const { resumeData } = useResumeBuilder();
 
-  const [isGenerating, setIsGenerating] =
-    useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [hiringManagerName, setHiringManagerName] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
+  const [additionalContext, setAdditionalContext] = useState("");
 
-  const [generationError, setGenerationError] =
-    useState<string | null>(null);
+  const [tone, setTone] =
+    useState<CoverLetterTone>("professional");
 
-  const companyName =
-    coverLetterData.company.companyName.trim();
+  const [length, setLength] =
+    useState<CoverLetterLength>("standard");
 
-  const jobTitle =
-    coverLetterData.company.jobTitle.trim();
+  const [generatedLetter, setGeneratedLetter] =
+    useState<GeneratedCoverLetter | null>(null);
 
-  const cannotGenerate =
-    !hasLoadedStorage ||
-    !companyName ||
-    !jobTitle;
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  const pdfFileName = createPdfFileName(
-    companyName,
-    jobTitle,
+  const candidateName = useMemo(
+    () =>
+      resumeData.personalDetails.fullName.trim() ||
+      "Your resume profile",
+    [resumeData.personalDetails.fullName],
   );
 
-  const handleGenerate = async () => {
-    if (cannotGenerate || isGenerating) {
+  const canGenerate =
+    companyName.trim().length > 0 &&
+    jobTitle.trim().length > 0 &&
+    jobDescription.trim().length >= 50 &&
+    !isGenerating;
+
+  async function handleGenerate(): Promise<void> {
+    if (!canGenerate) {
+      setErrorMessage(
+        "Enter the company name, job title and a job description of at least 50 characters.",
+      );
       return;
     }
 
     setIsGenerating(true);
-    setGenerationError(null);
+    setErrorMessage("");
+    setWarnings([]);
+    setCopied(false);
 
     try {
-      const response = await fetch(
-        "/api/ai-cover-letter",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            companyName,
-            jobTitle,
-            jobDescription:
-              coverLetterData.company.jobDescription,
-            applicantName: "",
-            skills: "",
-            experience: "",
-            tone: coverLetterData.generation.tone,
-            length:
-              coverLetterData.generation.length,
-          }),
+      const response = await fetch("/api/ai-cover-letter", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          resume: resumeData,
+          companyName: companyName.trim(),
+          hiringManagerName:
+            hiringManagerName.trim() || undefined,
+          jobTitle: jobTitle.trim(),
+          jobDescription: jobDescription.trim(),
+          tone,
+          length,
+          additionalContext:
+            additionalContext.trim() || undefined,
+        }),
+      });
 
-      const result =
-        (await response.json()) as GenerateCoverLetterResponse;
+      const data = (await response.json()) as
+        | CoverLetterApiResponse
+        | CoverLetterApiError;
 
-      if (!response.ok) {
+      if (!response.ok || !("coverLetter" in data)) {
         throw new Error(
-          result.error ||
-            "The AI service could not generate the cover letter.",
+          "error" in data
+            ? data.details || data.error
+            : "Failed to generate the cover letter.",
         );
       }
 
-      if (
-        !result.coverLetter ||
-        !result.coverLetter.trim()
-      ) {
-        throw new Error(
-          "The AI service returned an empty cover letter.",
-        );
-      }
-
-      replaceContent(
-        splitCoverLetter(result.coverLetter),
-      );
+      setGeneratedLetter(data.coverLetter);
+      setWarnings(data.warnings);
+      saveCoverLetter(data.coverLetter);
     } catch (error) {
-      setGenerationError(
+      setGeneratedLetter(null);
+
+      setErrorMessage(
         error instanceof Error
           ? error.message
-          : "An unexpected error occurred while generating the cover letter.",
+          : "Failed to generate the cover letter.",
       );
     } finally {
       setIsGenerating(false);
     }
-  };
+  }
 
-  const handleReset = () => {
-    const confirmed = window.confirm(
-      "Reset the entire cover letter? This will remove the saved draft.",
-    );
-
-    if (confirmed) {
-      resetCoverLetter();
-      setGenerationError(null);
+  async function handleCopy(): Promise<void> {
+    if (!generatedLetter?.content) {
+      return;
     }
-  };
+
+    try {
+      await navigator.clipboard.writeText(
+        generatedLetter.content,
+      );
+
+      setCopied(true);
+
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch {
+      setErrorMessage(
+        "The cover letter could not be copied automatically.",
+      );
+    }
+  }
+
+  function handleDownload(): void {
+    if (!generatedLetter?.content) {
+      return;
+    }
+
+    const blob = new Blob([generatedLetter.content], {
+      type: "text/plain;charset=utf-8",
+    });
+
+    const downloadUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+
+    const safeJobTitle = generatedLetter.jobTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    anchor.href = downloadUrl;
+    anchor.download = `${safeJobTitle || "generated"}-cover-letter.txt`;
+
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+
+    URL.revokeObjectURL(downloadUrl);
+  }
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div>
-            <Link
-              href="/dashboard"
-              className="text-sm font-semibold text-slate-500 transition hover:text-slate-950"
-            >
-              ← Back to dashboard
-            </Link>
-
-            <div className="mt-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Panthrex
-              </p>
-
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-                Cover Letter Generator
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                Generate, edit and export a tailored
-                cover letter for your target role.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5">
-              <p className="text-xs font-medium text-slate-500">
-                Draft status
-              </p>
-
-              <p className="mt-0.5 text-sm font-semibold text-slate-900">
-                {!hasLoadedStorage
-                  ? "Loading saved draft..."
-                  : lastSavedAt
-                    ? `Saved at ${lastSavedAt.toLocaleTimeString(
-                        [],
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        },
-                      )}`
-                    : "Ready"}
-              </p>
-            </div>
-
-            <ExportPdfButton
-              targetId={COVER_LETTER_PREVIEW_ID}
-              fileName={pdfFileName}
-            />
-
-            <button
-              type="button"
-              onClick={handleReset}
-              disabled={
-                !hasLoadedStorage || isGenerating
-              }
-              className="rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Reset draft
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4">
-          <p className="text-sm font-semibold text-blue-950">
-            AI-powered workspace
+    <main className="min-h-screen bg-slate-950 px-4 py-10 text-white sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8">
+          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-400">
+            Panthrex AI
           </p>
 
-          <p className="mt-1 text-sm leading-6 text-blue-800">
-            Add the company, role and job
-            description, generate a tailored draft,
-            edit the content and export the final
-            letter as a PDF.
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            AI Cover Letter Generator
+          </h1>
+
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400 sm:text-base">
+            Generate a tailored UK cover letter using{" "}
+            <span className="font-medium text-slate-200">
+              {candidateName}
+            </span>
+            , your saved resume and the target job description.
           </p>
         </div>
 
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(500px,0.9fr)]">
-          <div className="space-y-6">
-            <CompanyForm
-              company={coverLetterData.company}
-              generation={
-                coverLetterData.generation
-              }
-              onCompanyChange={updateCompany}
-              onGenerationChange={
-                updateGenerationOptions
-              }
-              disabled={
-                !hasLoadedStorage || isGenerating
-              }
-            />
+        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+          <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-xl sm:p-6">
+            <div className="space-y-5">
+              <div>
+                <label
+                  htmlFor="companyName"
+                  className="mb-2 block text-sm font-medium text-slate-200"
+                >
+                  Company name
+                </label>
 
-            <GenerateButton
-              onGenerate={handleGenerate}
-              isGenerating={isGenerating}
-              disabled={cannotGenerate}
-              error={generationError}
-            />
+                <input
+                  id="companyName"
+                  type="text"
+                  value={companyName}
+                  onChange={(event) =>
+                    setCompanyName(event.target.value)
+                  }
+                  placeholder="Example: Barclays"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-500"
+                />
+              </div>
 
-            <TemplateSelector
-              template={coverLetterData.template}
-              onTemplateChange={updateTemplate}
-              disabled={
-                !hasLoadedStorage || isGenerating
-              }
-            />
+              <div>
+                <label
+                  htmlFor="jobTitle"
+                  className="mb-2 block text-sm font-medium text-slate-200"
+                >
+                  Job title
+                </label>
 
-            <CoverLetterEditor
-              content={coverLetterData.content}
-              onContentChange={updateContent}
-              disabled={
-                !hasLoadedStorage || isGenerating
-              }
-            />
-          </div>
+                <input
+                  id="jobTitle"
+                  type="text"
+                  value={jobTitle}
+                  onChange={(event) =>
+                    setJobTitle(event.target.value)
+                  }
+                  placeholder="Example: Fraud Analytics Graduate"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-500"
+                />
+              </div>
 
-          <div className="xl:sticky xl:top-6">
-            <CoverLetterPreview
-              company={coverLetterData.company}
-              content={coverLetterData.content}
-              template={coverLetterData.template}
-              previewId={COVER_LETTER_PREVIEW_ID}
-            />
-          </div>
+              <div>
+                <label
+                  htmlFor="hiringManagerName"
+                  className="mb-2 block text-sm font-medium text-slate-200"
+                >
+                  Hiring manager name
+                </label>
+
+                <input
+                  id="hiringManagerName"
+                  type="text"
+                  value={hiringManagerName}
+                  onChange={(event) =>
+                    setHiringManagerName(event.target.value)
+                  }
+                  placeholder="Optional"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="jobDescription"
+                  className="mb-2 block text-sm font-medium text-slate-200"
+                >
+                  Job description
+                </label>
+
+                <textarea
+                  id="jobDescription"
+                  value={jobDescription}
+                  onChange={(event) =>
+                    setJobDescription(event.target.value)
+                  }
+                  placeholder="Paste the complete job description here..."
+                  rows={10}
+                  className="w-full resize-y rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm leading-6 text-white outline-none transition focus:border-cyan-500"
+                />
+
+                <p className="mt-2 text-xs text-slate-500">
+                  {jobDescription.trim().length} characters
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="additionalContext"
+                  className="mb-2 block text-sm font-medium text-slate-200"
+                >
+                  Additional context
+                </label>
+
+                <textarea
+                  id="additionalContext"
+                  value={additionalContext}
+                  onChange={(event) =>
+                    setAdditionalContext(event.target.value)
+                  }
+                  placeholder="Optional: motivation, referral, availability or career transition details."
+                  rows={4}
+                  className="w-full resize-y rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm leading-6 text-white outline-none transition focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="tone"
+                    className="mb-2 block text-sm font-medium text-slate-200"
+                  >
+                    Tone
+                  </label>
+
+                  <select
+                    id="tone"
+                    value={tone}
+                    onChange={(event) =>
+                      setTone(
+                        event.target.value as CoverLetterTone,
+                      )
+                    }
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-500"
+                  >
+                    {toneOptions.map((option) => (
+                      <option
+                        key={option.value}
+                        value={option.value}
+                      >
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="length"
+                    className="mb-2 block text-sm font-medium text-slate-200"
+                  >
+                    Length
+                  </label>
+
+                  <select
+                    id="length"
+                    value={length}
+                    onChange={(event) =>
+                      setLength(
+                        event.target.value as CoverLetterLength,
+                      )
+                    }
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-500"
+                  >
+                    {lengthOptions.map((option) => (
+                      <option
+                        key={option.value}
+                        value={option.value}
+                      >
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {errorMessage ? (
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  {errorMessage}
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={!canGenerate}
+                className="w-full rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isGenerating
+                  ? "Generating cover letter..."
+                  : "Generate cover letter"}
+              </button>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 shadow-xl sm:p-6">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">
+                  Generated cover letter
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-400">
+                  Review, copy or download the generated result.
+                </p>
+              </div>
+
+              {generatedLetter ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-cyan-500 hover:text-cyan-300"
+                  >
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-cyan-500 hover:text-cyan-300"
+                  >
+                    Download
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {warnings.length > 0 ? (
+              <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                <p className="text-sm font-semibold text-amber-200">
+                  Review notes
+                </p>
+
+                <ul className="mt-2 space-y-1 text-sm text-amber-100/80">
+                  {warnings.map((warning) => (
+                    <li key={warning}>• {warning}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {generatedLetter ? (
+              <div className="min-h-[680px] rounded-xl border border-slate-700 bg-white p-6 text-slate-900 shadow-inner sm:p-8">
+                <div className="mb-6 border-b border-slate-200 pb-4">
+                  <p className="text-sm font-semibold text-slate-500">
+                    {generatedLetter.title}
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    Generated{" "}
+                    {new Date(
+                      generatedLetter.createdAt,
+                    ).toLocaleString("en-GB")}
+                  </p>
+                </div>
+
+                <div className="whitespace-pre-wrap text-[15px] leading-7">
+                  {generatedLetter.content}
+                </div>
+              </div>
+            ) : (
+              <div className="flex min-h-[680px] items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-8 text-center">
+                <div className="max-w-md">
+                  <p className="text-lg font-semibold text-slate-200">
+                    Your cover letter will appear here
+                  </p>
+
+                  <p className="mt-3 text-sm leading-6 text-slate-500">
+                    Enter the target job details and generate a
+                    tailored letter using your saved resume.
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
         </div>
       </div>
     </main>
