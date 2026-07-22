@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import type {
   AiExperienceLevel,
@@ -23,97 +23,97 @@ const SECTION_OPTIONS: Array<{
   value: AiResumeSection;
   label: string;
 }> = [
-  {
-    value: "professional-summary",
-    label: "Professional summary",
-  },
-  {
-    value: "work-experience",
-    label: "Work experience",
-  },
-  {
-    value: "project-description",
-    label: "Project description",
-  },
-  {
-    value: "skills",
-    label: "Skills",
-  },
-];
+    {
+      value: "professional-summary",
+      label: "Professional summary",
+    },
+    {
+      value: "work-experience",
+      label: "Work experience",
+    },
+    {
+      value: "project-description",
+      label: "Project description",
+    },
+    {
+      value: "skills",
+      label: "Skills",
+    },
+  ];
 
 const MODE_OPTIONS: Array<{
   value: AiResumeWriterMode;
   label: string;
   description: string;
 }> = [
-  {
-    value: "generate",
-    label: "Generate",
-    description: "Create new resume content",
-  },
-  {
-    value: "improve",
-    label: "Improve",
-    description: "Rewrite existing content",
-  },
-  {
-    value: "tailor",
-    label: "Tailor",
-    description: "Match a target job",
-  },
-];
+    {
+      value: "generate",
+      label: "Generate",
+      description: "Create new resume content",
+    },
+    {
+      value: "improve",
+      label: "Improve",
+      description: "Rewrite existing content",
+    },
+    {
+      value: "tailor",
+      label: "Tailor",
+      description: "Match a target job",
+    },
+  ];
 
 const TONE_OPTIONS: Array<{
   value: AiWritingTone;
   label: string;
 }> = [
-  {
-    value: "professional",
-    label: "Professional",
-  },
-  {
-    value: "confident",
-    label: "Confident",
-  },
-  {
-    value: "concise",
-    label: "Concise",
-  },
-  {
-    value: "technical",
-    label: "Technical",
-  },
-  {
-    value: "leadership",
-    label: "Leadership",
-  },
-];
+    {
+      value: "professional",
+      label: "Professional",
+    },
+    {
+      value: "confident",
+      label: "Confident",
+    },
+    {
+      value: "concise",
+      label: "Concise",
+    },
+    {
+      value: "technical",
+      label: "Technical",
+    },
+    {
+      value: "leadership",
+      label: "Leadership",
+    },
+  ];
 
 const EXPERIENCE_LEVEL_OPTIONS: Array<{
   value: AiExperienceLevel;
   label: string;
 }> = [
-  {
-    value: "student",
-    label: "Student",
-  },
-  {
-    value: "entry-level",
-    label: "Entry level",
-  },
-  {
-    value: "mid-level",
-    label: "Mid level",
-  },
-  {
-    value: "senior",
-    label: "Senior",
-  },
-  {
-    value: "executive",
-    label: "Executive",
-  },
-];
+    {
+      value: "student",
+      label: "Student",
+    },
+    {
+      value: "entry-level",
+      label: "Entry level",
+    },
+    {
+      value: "mid-level",
+      label: "Mid level",
+    },
+    {
+      value: "senior",
+      label: "Senior",
+    },
+    {
+      value: "executive",
+      label: "Executive",
+    },
+  ];
 
 export default function AiResumeWriterPanel({
   resumeData,
@@ -158,19 +158,7 @@ export default function AiResumeWriterPanel({
   const [appliedSuggestionId, setAppliedSuggestionId] =
     useState<string | null>(null);
 
-  useEffect(() => {
-    setSection(lockedSection ?? initialSection);
-  }, [initialSection, lockedSection]);
 
-  useEffect(() => {
-    setContent(existingContent);
-  }, [existingContent]);
-
-  useEffect(() => {
-    clearSuggestions();
-    clearError();
-    setAppliedSuggestionId(null);
-  }, [mode, section, clearSuggestions, clearError]);
 
   const requiresExistingContent = mode === "improve";
   const requiresJobDetails = mode === "tailor";
@@ -181,7 +169,21 @@ export default function AiResumeWriterPanel({
     (!requiresJobDetails ||
       (targetRole.trim().length > 0 &&
         jobDescription.trim().length > 0));
+  function resetSuggestionState() {
+    clearSuggestions();
+    clearError();
+    setAppliedSuggestionId(null);
+  }
 
+  function handleModeChange(nextMode: AiResumeWriterMode) {
+    setMode(nextMode);
+    resetSuggestionState();
+  }
+
+  function handleSectionChange(nextSection: AiResumeSection) {
+    setSection(nextSection);
+    resetSuggestionState();
+  }
   async function handleGenerate() {
     setAppliedSuggestionId(null);
 
@@ -242,19 +244,17 @@ export default function AiResumeWriterPanel({
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setMode(option.value)}
-                  className={`rounded-2xl border px-4 py-3 text-left transition ${
-                    isActive
+                  onClick={() => handleModeChange(option.value)}
+                  className={`rounded-2xl border px-4 py-3 text-left transition ${isActive
                       ? "border-violet-600 bg-violet-50 ring-2 ring-violet-100"
                       : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                  }`}
+                    }`}
                 >
                   <span
-                    className={`block text-sm font-semibold ${
-                      isActive
+                    className={`block text-sm font-semibold ${isActive
                         ? "text-violet-700"
                         : "text-slate-900"
-                    }`}
+                      }`}
                   >
                     {option.label}
                   </span>
@@ -284,7 +284,7 @@ export default function AiResumeWriterPanel({
               <select
                 value={section}
                 onChange={(event) =>
-                  setSection(
+                  handleSectionChange(
                     event.target.value as AiResumeSection,
                   )
                 }
@@ -344,11 +344,10 @@ export default function AiResumeWriterPanel({
                   key={option.value}
                   type="button"
                   onClick={() => setTone(option.value)}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                    isActive
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${isActive
                       ? "border-violet-600 bg-violet-600 text-white"
                       : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
-                  }`}
+                    }`}
                 >
                   {option.label}
                 </button>

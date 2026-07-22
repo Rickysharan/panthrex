@@ -12,7 +12,6 @@ import {
   type JobSearchApiResponse,
   type JobSearchFilters,
   type JobSearchResult,
-  type JobSearchState,
   type SavedJob,
 } from "./types";
 
@@ -290,20 +289,16 @@ export function useJobSearch() {
     searchJobs,
   ]);
 
-  const state: JobSearchState = {
-    jobs,
-    savedJobs,
-    selectedJob,
-    filters,
-    pagination,
-    loading,
-    error,
-    hasSearched,
-  };
-
   return useMemo(
     () => ({
-      ...state,
+      jobs,
+      savedJobs,
+      selectedJob,
+      filters,
+      pagination,
+      loading,
+      error,
+      hasSearched,
       updateFilters,
       resetFilters,
       searchJobs,
@@ -316,7 +311,14 @@ export function useJobSearch() {
       goToPreviousPage,
     }),
     [
-      state,
+      jobs,
+      savedJobs,
+      selectedJob,
+      filters,
+      pagination,
+      loading,
+      error,
+      hasSearched,
       updateFilters,
       resetFilters,
       searchJobs,

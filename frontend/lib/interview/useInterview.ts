@@ -11,29 +11,41 @@ import type {
 
 const STORAGE_KEY = "panthrex-interview-sessions";
 
+function loadStoredSessions(): InterviewSession[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+
+    if (!stored) {
+      return [];
+    }
+
+    const parsed = JSON.parse(stored);
+
+    return Array.isArray(parsed)
+      ? (parsed as InterviewSession[])
+      : [];
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+}
+
 export function useInterview() {
-  const [sessions, setSessions] = useState<InterviewSession[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] =
+    useState<InterviewSession[]>(loadStoredSessions);
+
+  const [loading] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-
-      if (stored) {
-        setSessions(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-    }
-  }, [sessions, loading]);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(sessions),
+    );
+  }, [sessions]);
 
   const createSession = useCallback(
     (session: InterviewSession) => {

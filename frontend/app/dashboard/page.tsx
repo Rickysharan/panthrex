@@ -22,7 +22,6 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import DashboardJobMatchCard from "@/components/dashboard/DashboardJobMatchCard";
 import { useState } from "react";
 
 const navigationItems = [

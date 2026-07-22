@@ -634,9 +634,9 @@ export function useResumeBuilder() {
             (experience) =>
               experience.id === id
                 ? {
-                    ...experience,
-                    ...updates,
-                  }
+                  ...experience,
+                  ...updates,
+                }
                 : experience,
           ),
       }));
@@ -686,9 +686,9 @@ export function useResumeBuilder() {
           (education) =>
             education.id === id
               ? {
-                  ...education,
-                  ...updates,
-                }
+                ...education,
+                ...updates,
+              }
               : education,
         ),
       }));
@@ -775,9 +775,9 @@ export function useResumeBuilder() {
           (project) =>
             project.id === id
               ? {
-                  ...project,
-                  ...updates,
-                }
+                ...project,
+                ...updates,
+              }
               : project,
         ),
       }));
@@ -825,9 +825,9 @@ export function useResumeBuilder() {
             (certification) =>
               certification.id === id
                 ? {
-                    ...certification,
-                    ...updates,
-                  }
+                  ...certification,
+                  ...updates,
+                }
                 : certification,
           ),
       }));
@@ -849,7 +849,7 @@ export function useResumeBuilder() {
     [],
   );
 
-    const importParsedResume = useCallback(
+  const importParsedResume = useCallback(
     (parsedResume: AiParsedResumeData) => {
       setResumeData((currentResume) => ({
         ...currentResume,
@@ -920,77 +920,77 @@ export function useResumeBuilder() {
             fullName:
               originalValue
                 ? replaceMatchingValue(
-                    updatedResume.personalDetails.fullName,
-                  )
+                  updatedResume.personalDetails.fullName,
+                )
                 : normalizedField === "fullname" ||
-                    normalizedField === "name"
+                  normalizedField === "name"
                   ? improvedValue
                   : updatedResume.personalDetails.fullName,
             email:
               originalValue
                 ? replaceMatchingValue(
-                    updatedResume.personalDetails.email,
-                  )
+                  updatedResume.personalDetails.email,
+                )
                 : normalizedField === "email"
                   ? improvedValue
                   : updatedResume.personalDetails.email,
             phone:
               originalValue
                 ? replaceMatchingValue(
-                    updatedResume.personalDetails.phone,
-                  )
+                  updatedResume.personalDetails.phone,
+                )
                 : normalizedField === "phone" ||
-                    normalizedField === "phonenumber"
+                  normalizedField === "phonenumber"
                   ? improvedValue
                   : updatedResume.personalDetails.phone,
             location:
               originalValue
                 ? replaceMatchingValue(
-                    updatedResume.personalDetails.location,
-                  )
+                  updatedResume.personalDetails.location,
+                )
                 : normalizedField === "location"
                   ? improvedValue
                   : updatedResume.personalDetails.location,
             professionalSummary:
               originalValue
                 ? replaceMatchingValue(
-                    updatedResume.personalDetails.professionalSummary,
-                  )
+                  updatedResume.personalDetails.professionalSummary,
+                )
                 : normalizedField === "professionalsummary" ||
-                    normalizedField === "summary"
+                  normalizedField === "summary"
                   ? improvedValue
                   : updatedResume.personalDetails
-                      .professionalSummary,
+                    .professionalSummary,
             jobTitle:
               originalValue
                 ? replaceMatchingValue(
-                    updatedResume.personalDetails.jobTitle,
-                  )
+                  updatedResume.personalDetails.jobTitle,
+                )
                 : normalizedField === "jobtitle" ||
-                    normalizedField === "professionaltitle"
+                  normalizedField === "professionaltitle"
                   ? improvedValue
                   : updatedResume.personalDetails.jobTitle,
             website:
               originalValue
                 ? replaceMatchingValue(
-                    updatedResume.personalDetails.website,
-                  )
+                  updatedResume.personalDetails.website,
+                )
                 : normalizedField === "website"
                   ? improvedValue
                   : updatedResume.personalDetails.website,
             linkedin:
               originalValue
                 ? replaceMatchingValue(
-                    updatedResume.personalDetails.linkedin,
-                  )
+                  updatedResume.personalDetails.linkedin,
+                )
                 : normalizedField === "linkedin"
                   ? improvedValue
                   : updatedResume.personalDetails.linkedin,
             github:
               originalValue
                 ? replaceMatchingValue(
-                    updatedResume.personalDetails.github,
-                  )
+                  updatedResume.personalDetails.github,
+                )
                 : normalizedField === "github"
                   ? improvedValue
                   : updatedResume.personalDetails.github,
@@ -1067,13 +1067,13 @@ export function useResumeBuilder() {
                   : certification.issuer,
                 credentialId: originalValue
                   ? replaceMatchingValue(
-                      certification.credentialId,
-                    )
+                    certification.credentialId,
+                  )
                   : certification.credentialId,
                 credentialUrl: originalValue
                   ? replaceMatchingValue(
-                      certification.credentialUrl,
-                    )
+                    certification.credentialUrl,
+                  )
                   : certification.credentialUrl,
               }),
             ),
@@ -1082,6 +1082,27 @@ export function useResumeBuilder() {
 
         return updatedResume;
       });
+    },
+    [],
+  );
+
+  const restoreResumeVersion = useCallback(
+    (snapshot: unknown): boolean => {
+      if (!isStoredResumeData(snapshot)) {
+        console.error(
+          "Unable to restore the resume version: invalid snapshot.",
+        );
+
+        return false;
+      }
+
+      const restoredResume = normalizeResumeData(snapshot);
+
+      setResumeData(restoredResume);
+      writeStoredResumeData(restoredResume);
+      setLastSavedAt(null);
+
+      return true;
     },
     [],
   );
@@ -1105,7 +1126,9 @@ export function useResumeBuilder() {
   return useMemo(
     () => ({
       resumeData,
+      resumeId,
       lastSavedAt,
+      restoreResumeVersion,
       updateTitle,
       updateTemplate,
       updatePersonalDetails,
@@ -1129,7 +1152,9 @@ export function useResumeBuilder() {
     }),
     [
       resumeData,
+      resumeId,
       lastSavedAt,
+      restoreResumeVersion,
       updateTitle,
       updateTemplate,
       updatePersonalDetails,

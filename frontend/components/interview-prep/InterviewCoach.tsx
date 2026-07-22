@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import type {
   EvaluateInterviewAnswerResponse,
@@ -42,10 +42,7 @@ export default function InterviewCoach() {
   >(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    setActiveQuestionIndex(0);
-    setError("");
-  }, [selectedSessionId]);
+
 
   const activeQuestion =
     selectedSession?.questions[activeQuestionIndex] ?? null;
@@ -68,9 +65,9 @@ export default function InterviewCoach() {
       scores.length === 0
         ? 0
         : Math.round(
-            scores.reduce((total, score) => total + score, 0) /
-              scores.length,
-          );
+          scores.reduce((total, score) => total + score, 0) /
+          scores.length,
+        );
 
     const bestScore = scores.length === 0 ? 0 : Math.max(...scores);
 
@@ -81,6 +78,11 @@ export default function InterviewCoach() {
       evaluatedAnswers: scores.length,
     };
   }, [sessions]);
+  function handleSelectSession(sessionId: string) {
+    setSelectedSessionId(sessionId);
+    setActiveQuestionIndex(0);
+    setError("");
+  }
 
   async function generateInterview() {
     if (!role.trim()) {
@@ -112,9 +114,9 @@ export default function InterviewCoach() {
 
       const data = (await response.json()) as
         | {
-            success: true;
-            questions: InterviewQuestion[];
-          }
+          success: true;
+          questions: InterviewQuestion[];
+        }
         | InterviewPrepError;
 
       if (!response.ok || !data.success) {
@@ -146,8 +148,7 @@ export default function InterviewCoach() {
       };
 
       saveSession(session);
-      setSelectedSessionId(session.id);
-      setActiveQuestionIndex(0);
+      handleSelectSession(session.id);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -232,9 +233,7 @@ export default function InterviewCoach() {
       return;
     }
 
-    setSelectedSessionId(duplicated.id);
-    setActiveQuestionIndex(0);
-    setError("");
+    handleSelectSession(duplicated.id);
   }
 
   function handleDeleteSession(sessionId: string) {
@@ -513,26 +512,23 @@ export default function InterviewCoach() {
                     sessionScores.length === 0
                       ? null
                       : Math.round(
-                          sessionScores.reduce(
-                            (total, score) => total + score,
-                            0,
-                          ) / sessionScores.length,
-                        );
+                        sessionScores.reduce(
+                          (total, score) => total + score,
+                          0,
+                        ) / sessionScores.length,
+                      );
 
                   return (
                     <article
                       key={session.id}
-                      className={`rounded-xl border p-4 transition ${
-                        isSelected
+                      className={`rounded-xl border p-4 transition ${isSelected
                           ? "border-indigo-500 bg-indigo-500/10"
                           : "border-slate-800 bg-slate-950/40"
-                      }`}
+                        }`}
                     >
                       <button
                         type="button"
-                        onClick={() =>
-                          setSelectedSessionId(session.id)
-                        }
+                        onClick={() => handleSelectSession(session.id)}
                         className="w-full text-left"
                       >
                         <p className="font-semibold text-white">
@@ -633,13 +629,12 @@ export default function InterviewCoach() {
                         setError("");
                       }}
                       aria-label={`Open question ${index + 1}`}
-                      className={`flex h-10 min-w-10 items-center justify-center rounded-lg border text-sm font-semibold transition ${
-                        index === activeQuestionIndex
+                      className={`flex h-10 min-w-10 items-center justify-center rounded-lg border text-sm font-semibold transition ${index === activeQuestionIndex
                           ? "border-indigo-500 bg-indigo-600 text-white"
                           : question.completed
                             ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
                             : "border-slate-700 bg-slate-950 text-slate-400 hover:border-slate-500"
-                      }`}
+                        }`}
                     >
                       {index + 1}
                     </button>
@@ -830,11 +825,10 @@ function FeedbackList({
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
       <h4
-        className={`font-semibold ${
-          variant === "strength"
+        className={`font-semibold ${variant === "strength"
             ? "text-emerald-300"
             : "text-amber-300"
-        }`}
+          }`}
       >
         {title}
       </h4>

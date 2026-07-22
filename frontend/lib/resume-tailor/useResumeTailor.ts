@@ -12,31 +12,41 @@ import type {
 
 const STORAGE_KEY = "panthrex.resume-tailor.sessions";
 
+function loadStoredSessions(): ResumeTailorSession[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+
+    return Array.isArray(parsed)
+      ? (parsed as ResumeTailorSession[])
+      : [];
+  } catch {
+    console.error("Unable to load resume tailor sessions.");
+    return [];
+  }
+}
+
 export function useResumeTailor() {
-  const [sessions, setSessions] = useState<ResumeTailorSession[]>([]);
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
-    null,
-  );
+  const [sessions, setSessions] =
+    useState<ResumeTailorSession[]>(loadStoredSessions);
+
+  const [selectedSessionId, setSelectedSessionId] =
+    useState<string | null>(() => {
+      const sessions = loadStoredSessions();
+      return sessions.length > 0 ? sessions[0].id : null;
+    });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw) as ResumeTailorSession[];
-
-      setSessions(parsed);
-
-      if (parsed.length > 0) {
-        setSelectedSessionId(parsed[0].id);
-      }
-    } catch {
-      console.error("Unable to load resume tailor sessions.");
-    }
-  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
@@ -159,15 +169,11 @@ export function useResumeTailor() {
     selectedSessionId,
     loading,
     error,
-
     tailorResume,
-
     deleteSession,
     duplicateSession,
     clearSessions,
-
     updateAnalysis,
-
     setSelectedSessionId,
     setError,
   };

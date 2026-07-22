@@ -62,6 +62,10 @@ function isSavedJobMatch(
 }
 
 function loadStoredMatches(): SavedJobMatch[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
   try {
     const storedValue =
       localStorage.getItem(STORAGE_KEY);
@@ -90,24 +94,14 @@ function loadStoredMatches(): SavedJobMatch[] {
 
 export function useJobMatching() {
   const [savedMatches, setSavedMatches] =
-    useState<SavedJobMatch[]>([]);
+    useState<SavedJobMatch[]>(loadStoredMatches);
 
   const [selectedMatchId, setSelectedMatchId] =
     useState<string | null>(null);
 
-  const [isLoaded, setIsLoaded] =
-    useState(false);
+  const [isLoaded] = useState(true);
 
   useEffect(() => {
-    setSavedMatches(loadStoredMatches());
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded) {
-      return;
-    }
-
     try {
       localStorage.setItem(
         STORAGE_KEY,
@@ -119,7 +113,7 @@ export function useJobMatching() {
         error,
       );
     }
-  }, [savedMatches, isLoaded]);
+  }, [savedMatches]);
 
   const selectedMatch = useMemo(
     () =>

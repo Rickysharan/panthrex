@@ -89,9 +89,8 @@ function saveStoredApplications(
 }
 
 export function useJobTracker() {
-  const [applications, setApplications] = useState<
-    JobApplication[]
-  >([]);
+  const [applications, setApplications] =
+    useState<JobApplication[]>(readStoredApplications);
 
   const [selectedApplicationId, setSelectedApplicationId] =
     useState<string | null>(null);
@@ -102,20 +101,11 @@ export function useJobTracker() {
     JobApplicationStatus | "all"
   >("all");
 
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded] = useState(true);
 
   useEffect(() => {
-    setApplications(readStoredApplications());
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded) {
-      return;
-    }
-
     saveStoredApplications(applications);
-  }, [applications, isLoaded]);
+  }, [applications]);
 
   const addApplication = useCallback(
     (

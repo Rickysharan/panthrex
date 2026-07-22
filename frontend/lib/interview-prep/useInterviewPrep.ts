@@ -9,43 +9,47 @@ import type {
 
 const STORAGE_KEY = "panthrex-interview-sessions";
 
+function loadStoredSessions(): InterviewSession[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+
+    return Array.isArray(parsed)
+      ? (parsed as InterviewSession[])
+      : [];
+  } catch (error) {
+    console.error(
+      "Unable to load interview sessions",
+      error,
+    );
+    return [];
+  }
+}
+
 export function useInterviewPrep() {
-  const [sessions, setSessions] = useState<InterviewSession[]>([]);
+  const [sessions, setSessions] =
+    useState<InterviewSession[]>(loadStoredSessions);
+
   const [selectedSessionId, setSelectedSessionId] =
     useState<string | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+
+  const [isLoaded] = useState(true);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-
-      if (raw) {
-        const parsed = JSON.parse(raw);
-
-        if (Array.isArray(parsed)) {
-          setSessions(parsed);
-        }
-      }
-    } catch (error) {
-      console.error(
-        "Unable to load interview sessions",
-        error,
-      );
-    } finally {
-      setIsLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded) {
-      return;
-    }
-
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify(sessions),
     );
-  }, [sessions, isLoaded]);
+  }, [sessions]);
 
   const selectedSession = useMemo(
     () =>
@@ -200,33 +204,19 @@ export function useInterviewPrep() {
 
   return {
     isLoaded,
-
     sessions,
-
     selectedSession,
-
     selectedSessionId,
-
     completedQuestions,
-
     totalQuestions,
-
     progress,
-
     setSelectedSessionId,
-
     saveSession,
-
     updateSession,
-
     deleteSession,
-
     duplicateSession,
-
     clearSessions,
-
     updateAnswer,
-
     saveFeedback,
   };
 }

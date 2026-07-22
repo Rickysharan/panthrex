@@ -52,7 +52,7 @@ export default function Testimonials() {
             </div>
 
             <p className="leading-7 text-white/70">
-              "{person.quote}"
+              &ldquo;{person.quote}&rdquo;
             </p>
 
             <div className="mt-8">

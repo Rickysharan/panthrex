@@ -20,6 +20,7 @@ import EducationForm from "@/components/resume-builder/EducationForm";
 import ExportPdfButton from "@/components/resume-builder/ExportPdfButton";
 import PersonalDetailsForm from "@/components/resume-builder/PersonalDetailsForm";
 import ProjectsForm from "@/components/resume-builder/ProjectsForm";
+import ResumeVersionHistory from "@/components/resume-builder/ResumeVersionHistory";
 import SkillsForm from "@/components/resume-builder/SkillsForm";
 import TemplateSelector from "@/components/resume-builder/TemplateSelector";
 import WorkExperienceForm from "@/components/resume-builder/WorkExperienceForm";
@@ -40,10 +41,12 @@ export default function ResumeBuilderPage() {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [enhancementError, setEnhancementError] =
     useState("");
-  
+
   const {
     resumeData,
+    resumeId,
     lastSavedAt,
+    restoreResumeVersion,
     updateTitle,
     updateTemplate,
     updatePersonalDetails,
@@ -119,418 +122,452 @@ export default function ResumeBuilderPage() {
   }, [applyEnhancementSuggestions]);
 
   async function handleEnhanceResume() {
-  if (isEnhancing) {
-    return;
-  }
-
-  setIsEnhancing(true);
-  setEnhancementError("");
-
-  try {
-    const response = await fetch(
-      "/api/ai-resume-enhancer",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          resume: resumeData,
-          targetRole:
-            resumeData.personalDetails.jobTitle,
-        }),
-      },
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.details ||
-          data.error ||
-          "The resume could not be enhanced.",
-      );
+    if (isEnhancing) {
+      return;
     }
 
-    window.sessionStorage.setItem(
-      "panthrex-resume-enhancements",
-      JSON.stringify(data),
-    );
+    setIsEnhancing(true);
+    setEnhancementError("");
 
-    window.location.href = "/resume-enhancer";
-  } catch (error) {
-    setEnhancementError(
-      error instanceof Error
-        ? error.message
-        : "The resume could not be enhanced.",
-    );
-  } finally {
-    setIsEnhancing(false);
+    try {
+      const response = await fetch(
+        "/api/ai-resume-enhancer",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            resume: resumeData,
+            targetRole:
+              resumeData.personalDetails.jobTitle,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.details ||
+          data.error ||
+          "The resume could not be enhanced.",
+        );
+      }
+
+      window.sessionStorage.setItem(
+        "panthrex-resume-enhancements",
+        JSON.stringify(data),
+      );
+
+      window.location.href = "/resume-enhancer";
+    } catch (error) {
+      setEnhancementError(
+        error instanceof Error
+          ? error.message
+          : "The resume could not be enhanced.",
+      );
+    } finally {
+      setIsEnhancing(false);
+    }
   }
-}
 
   const savedStatus = lastSavedAt
     ? `Saved at ${lastSavedAt.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`
     : "Draft autosaves locally";
 
   return (
     <>
       <main className="resume-builder-screen min-h-screen bg-[#050816] text-white">
-      <div
-        aria-hidden="true"
-        className="fixed left-[-160px] top-[-150px] h-[420px] w-[420px] rounded-full bg-violet-600/15 blur-[140px]"
-      />
-
-      <div
-        aria-hidden="true"
-        className="fixed bottom-[-180px] right-[-140px] h-[440px] w-[440px] rounded-full bg-blue-500/10 blur-[150px]"
-      />
-
-      {sidebarOpen && (
-        <button
-          type="button"
-          aria-label="Close sidebar"
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+        <div
+          aria-hidden="true"
+          className="fixed left-[-160px] top-[-150px] h-[420px] w-[420px] rounded-full bg-violet-600/15 blur-[140px]"
         />
-      )}
 
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/10 bg-[#070a18]/95 p-5 backdrop-blur-2xl transition-transform duration-300 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[#050816]">
-              <Sparkles size={21} />
-            </span>
+        <div
+          aria-hidden="true"
+          className="fixed bottom-[-180px] right-[-140px] h-[440px] w-[440px] rounded-full bg-blue-500/10 blur-[150px]"
+        />
 
-            <div>
-              <p className="text-lg font-bold tracking-tight">
-                Panthrex
-              </p>
-
-              <p className="text-xs text-white/35">
-                Career Intelligence
-              </p>
-            </div>
-          </Link>
-
+        {sidebarOpen && (
           <button
             type="button"
             aria-label="Close sidebar"
             onClick={() => setSidebarOpen(false)}
-            className="rounded-xl p-2 text-white/50 transition hover:bg-white/5 hover:text-white lg:hidden"
-          >
-            <X size={20} />
-          </button>
-        </div>
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          />
+        )}
 
-        <nav className="mt-10 space-y-2">
-          <Link
-            href="/dashboard"
-            onClick={() => setSidebarOpen(false)}
-            className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white/55 transition hover:bg-white/[0.055] hover:text-white"
-          >
-            <ArrowLeft size={19} />
-            Back to dashboard
-          </Link>
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/10 bg-[#070a18]/95 p-5 backdrop-blur-2xl transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
+        >
+          <div className="flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[#050816]">
+                <Sparkles size={21} />
+              </span>
 
-          <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-sm font-medium text-[#050816]">
-            <FileText size={19} />
-            Resume Builder
-          </div>
-        </nav>
+              <div>
+                <p className="text-lg font-bold tracking-tight">
+                  Panthrex
+                </p>
 
-        <div className="mt-8 border-t border-white/10 pt-6">
-          <p className="px-4 text-xs font-semibold uppercase tracking-[0.16em] text-white/30">
-            Resume sections
-          </p>
-
-          <div className="mt-3 space-y-2">
-            <SectionNavigationItem
-              number="01"
-              label="Personal details"
-              href="#personal-details"
-              active
-              complete={Boolean(
-                resumeData.personalDetails.fullName &&
-                  resumeData.personalDetails.email,
-              )}
-            />
-
-            <SectionNavigationItem
-              number="02"
-              label="Work experience"
-              href="#work-experience"
-              complete={resumeData.workExperience.length > 0}
-            />
-
-            <SectionNavigationItem
-              number="03"
-              label="Education"
-              href="#education"
-              complete={resumeData.education.length > 0}
-            />
-
-            <SectionNavigationItem
-              number="04"
-              label="Skills"
-              href="#skills"
-              complete={resumeData.skills.length > 0}
-            />
-
-            <SectionNavigationItem
-              number="05"
-              label="Projects"
-              href="#projects"
-              complete={resumeData.projects.length > 0}
-            />
-
-            <SectionNavigationItem
-              number="06"
-              label="Certifications"
-              href="#certifications"
-              complete={resumeData.certifications.length > 0}
-            />
-          </div>
-        </div>
-
-        <div className="mt-auto rounded-3xl border border-violet-400/20 bg-violet-400/[0.075] p-5">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-400/15 text-violet-300">
-              <Sparkles size={19} />
-            </span>
-
-            <div>
-              <p className="text-sm font-semibold">
-                AI assistance
-              </p>
-
-              <p className="text-xs text-white/35">
-                Professional summary writer ready
-              </p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <div className="relative z-10 lg:pl-72">
-        <header className="sticky top-0 z-30 border-b border-white/10 bg-[#050816]/80 px-5 py-4 backdrop-blur-2xl sm:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <button
-                type="button"
-                aria-label="Open sidebar"
-                onClick={() => setSidebarOpen(true)}
-                className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-white/70 lg:hidden"
-              >
-                <Menu size={20} />
-              </button>
-
-              <div className="min-w-0">
-                <input
-                  type="text"
-                  value={resumeData.title}
-                  onChange={(event) =>
-                    updateTitle(event.target.value)
-                  }
-                  aria-label="Resume title"
-                  className="w-full min-w-0 bg-transparent text-lg font-semibold text-white outline-none placeholder:text-white/30 sm:w-72"
-                />
-
-                <div className="mt-1 flex items-center gap-1.5 text-xs text-white/35">
-                  <Save size={13} />
-                  {savedStatus}
-                </div>
+                <p className="text-xs text-white/35">
+                  Career Intelligence
+                </p>
               </div>
+            </Link>
+
+            <button
+              type="button"
+              aria-label="Close sidebar"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-xl p-2 text-white/50 transition hover:bg-white/5 hover:text-white lg:hidden"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <nav className="mt-10 space-y-2">
+            <Link
+              href="/dashboard"
+              onClick={() => setSidebarOpen(false)}
+              className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium text-white/55 transition hover:bg-white/[0.055] hover:text-white"
+            >
+              <ArrowLeft size={19} />
+              Back to dashboard
+            </Link>
+
+            <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-sm font-medium text-[#050816]">
+              <FileText size={19} />
+              Resume Builder
             </div>
+          </nav>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={resetResume}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white/60 transition hover:bg-white/[0.08] hover:text-white"
-              >
-                <RotateCcw size={17} />
+          <div className="mt-8 border-t border-white/10 pt-6">
+            <p className="px-4 text-xs font-semibold uppercase tracking-[0.16em] text-white/30">
+              Resume sections
+            </p>
 
-                <span className="hidden sm:inline">
-                  Reset
-                </span>
-              </button>
+            <div className="mt-3 space-y-2">
+              <SectionNavigationItem
+                number="01"
+                label="Personal details"
+                href="#personal-details"
+                active
+                complete={Boolean(
+                  resumeData.personalDetails.fullName &&
+                  resumeData.personalDetails.email,
+                )}
+              />
 
-              <button
-                type="button"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
-              >
-                <Eye size={17} />
-                Preview
-              </button>
+              <SectionNavigationItem
+                number="02"
+                label="Work experience"
+                href="#work-experience"
+                complete={resumeData.workExperience.length > 0}
+              />
 
-              <ExportPdfButton
-                documentTitle={resumeData.title}
+              <SectionNavigationItem
+                number="03"
+                label="Education"
+                href="#education"
+                complete={resumeData.education.length > 0}
+              />
+
+              <SectionNavigationItem
+                number="04"
+                label="Skills"
+                href="#skills"
+                complete={resumeData.skills.length > 0}
+              />
+
+              <SectionNavigationItem
+                number="05"
+                label="Projects"
+                href="#projects"
+                complete={resumeData.projects.length > 0}
+              />
+
+              <SectionNavigationItem
+                number="06"
+                label="Certifications"
+                href="#certifications"
+                complete={resumeData.certifications.length > 0}
               />
             </div>
           </div>
-        </header>
 
-        <div className="px-5 py-8 sm:px-8 lg:px-10">
-          <section className="flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-300">
-                Resume Builder
-              </p>
+          <div className="mt-auto rounded-3xl border border-violet-400/20 bg-violet-400/[0.075] p-5">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-400/15 text-violet-300">
+                <Sparkles size={19} />
+              </span>
 
-              <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
-                Build your professional resume.
-              </h1>
+              <div>
+                <p className="text-sm font-semibold">
+                  AI assistance
+                </p>
 
-              <p className="mt-3 max-w-2xl text-base leading-7 text-white/45">
-                Complete each section and review the live
-                preview as your resume takes shape.
-              </p>
+                <p className="text-xs text-white/35">
+                  Professional summary writer ready
+                </p>
+              </div>
             </div>
+          </div>
+        </aside>
 
-            <TemplateSelector
-              selectedTemplate={resumeData.template}
-              onTemplateChange={updateTemplate}
-            />
-          </section>
+        <div className="relative z-10 lg:pl-72">
+          <header className="sticky top-0 z-30 border-b border-white/10 bg-[#050816]/80 px-5 py-4 backdrop-blur-2xl sm:px-8">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <button
+                  type="button"
+                  aria-label="Open sidebar"
+                  onClick={() => setSidebarOpen(true)}
+                  className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-white/70 lg:hidden"
+                >
+                  <Menu size={20} />
+                </button>
 
-          <section className="mt-8 grid items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_560px]">
-            <div className="min-w-0">
-              <div
-                id="ai-resume-writer"
-                className="mb-6 scroll-mt-28"
-              >
-                <AiResumeWriterPanel
-                  resumeData={resumeData}
-                  initialSection="professional-summary"
-                  lockedSection="professional-summary"
-                  existingContent={
-                    resumeData.personalDetails.professionalSummary
-                  }
-                  onApplySuggestion={(content) =>
-                    updatePersonalDetails({
-                      ...resumeData.personalDetails,
-                      professionalSummary: content,
-                    })
-                  }
-                />
+                <div className="min-w-0">
+                  <input
+                    type="text"
+                    value={resumeData.title}
+                    onChange={(event) =>
+                      updateTitle(event.target.value)
+                    }
+                    aria-label="Resume title"
+                    className="w-full min-w-0 bg-transparent text-lg font-semibold text-white outline-none placeholder:text-white/30 sm:w-72"
+                  />
+
+                  <div className="mt-1 flex items-center gap-1.5 text-xs text-white/35">
+                    <Save size={13} />
+                    {savedStatus}
+                  </div>
+                </div>
               </div>
 
-              <div
-                id="personal-details"
-                className="scroll-mt-28"
-              >
-                <PersonalDetailsForm
-                  personalDetails={
-                    resumeData.personalDetails
-                  }
-                  onChange={updatePersonalDetails}
-                />
-              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={resetResume}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white/60 transition hover:bg-white/[0.08] hover:text-white"
+                >
+                  <RotateCcw size={17} />
 
-              <div
-                id="work-experience"
-                className="scroll-mt-28"
-              >
-                <WorkExperienceForm
-                  experiences={
-                    resumeData.workExperience
-                  }
-                  addExperience={addWorkExperience}
-                  updateExperience={
-                    updateWorkExperience
-                  }
-                  removeExperience={
-                    removeWorkExperience
-                  }
-                />
-              </div>
+                  <span className="hidden sm:inline">
+                    Reset
+                  </span>
+                </button>
 
-              <div
-                id="education"
-                className="scroll-mt-28"
-              >
-                <EducationForm
-                  educationItems={resumeData.education}
-                  addEducation={addEducation}
-                  updateEducation={updateEducation}
-                  removeEducation={removeEducation}
-                />
-              </div>
+                <button
+                  type="button"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+                >
+                  <Eye size={17} />
+                  Preview
+                </button>
 
-              <div
-                id="skills"
-                className="scroll-mt-28"
-              >
-                <SkillsForm
-                  skills={resumeData.skills}
-                  addSkill={addSkill}
-                  removeSkill={removeSkill}
-                />
-              </div>
+                <button
+                  type="button"
+                  onClick={handleEnhanceResume}
+                  disabled={isEnhancing}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Sparkles size={17} />
 
-              <div
-                id="projects"
-                className="scroll-mt-28"
-              >
-                <ProjectsForm
-                  projects={resumeData.projects}
-                  addProject={addProject}
-                  updateProject={updateProject}
-                  removeProject={removeProject}
-                />
-              </div>
+                  <span>
+                    {isEnhancing
+                      ? "Enhancing..."
+                      : "Enhance resume"}
+                  </span>
+                </button>
 
-              <div
-                id="certifications"
-                className="scroll-mt-28"
-              >
-                <CertificationsForm
-                  certifications={
-                    resumeData.certifications
-                  }
-                  addCertification={addCertification}
-                  updateCertification={
-                    updateCertification
-                  }
-                  removeCertification={
-                    removeCertification
-                  }
+                <ExportPdfButton
+                  documentTitle={resumeData.title}
                 />
               </div>
             </div>
+          </header>
 
-            <aside className="rounded-[28px] border border-white/10 bg-white/[0.035] p-4 sm:p-6 2xl:sticky 2xl:top-28">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold">
-                    Live preview
-                  </h2>
+          {enhancementError && (
+            <div className="mx-5 mt-5 rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200 sm:mx-8 lg:mx-10">
+              {enhancementError}
+            </div>
+          )}
 
-                  <p className="mt-1 text-sm text-white/40">
-                    {getTemplateDescription(
-                      resumeData.template,
-                    )}
-                  </p>
+          <div className="px-5 py-8 sm:px-8 lg:px-10">
+            <section className="flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-300">
+                  Resume Builder
+                </p>
+
+                <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
+                  Build your professional resume.
+                </h1>
+
+                <p className="mt-3 max-w-2xl text-base leading-7 text-white/45">
+                  Complete each section and review the live
+                  preview as your resume takes shape.
+                </p>
+              </div>
+
+              <TemplateSelector
+                selectedTemplate={resumeData.template}
+                onTemplateChange={updateTemplate}
+              />
+            </section>
+
+            <section className="mt-8 grid items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_560px]">
+              <div className="min-w-0">
+                <div
+                  id="ai-resume-writer"
+                  className="mb-6 scroll-mt-28"
+                >
+                  <AiResumeWriterPanel
+                    resumeData={resumeData}
+                    initialSection="professional-summary"
+                    lockedSection="professional-summary"
+                    existingContent={
+                      resumeData.personalDetails.professionalSummary
+                    }
+                    onApplySuggestion={(content) =>
+                      updatePersonalDetails({
+                        ...resumeData.personalDetails,
+                        professionalSummary: content,
+                      })
+                    }
+                  />
                 </div>
 
-                <span className="rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">
-                  Autosaved
-                </span>
+                <div
+                  id="personal-details"
+                  className="scroll-mt-28"
+                >
+                  <PersonalDetailsForm
+                    personalDetails={
+                      resumeData.personalDetails
+                    }
+                    onChange={updatePersonalDetails}
+                  />
+                </div>
+
+                <div
+                  id="work-experience"
+                  className="scroll-mt-28"
+                >
+                  <WorkExperienceForm
+                    experiences={
+                      resumeData.workExperience
+                    }
+                    addExperience={addWorkExperience}
+                    updateExperience={
+                      updateWorkExperience
+                    }
+                    removeExperience={
+                      removeWorkExperience
+                    }
+                  />
+                </div>
+
+                <div
+                  id="education"
+                  className="scroll-mt-28"
+                >
+                  <EducationForm
+                    educationItems={resumeData.education}
+                    addEducation={addEducation}
+                    updateEducation={updateEducation}
+                    removeEducation={removeEducation}
+                  />
+                </div>
+
+                <div
+                  id="skills"
+                  className="scroll-mt-28"
+                >
+                  <SkillsForm
+                    skills={resumeData.skills}
+                    addSkill={addSkill}
+                    removeSkill={removeSkill}
+                  />
+                </div>
+
+                <div
+                  id="projects"
+                  className="scroll-mt-28"
+                >
+                  <ProjectsForm
+                    projects={resumeData.projects}
+                    addProject={addProject}
+                    updateProject={updateProject}
+                    removeProject={removeProject}
+                  />
+                </div>
+
+                <div
+                  id="certifications"
+                  className="scroll-mt-28"
+                >
+                  <CertificationsForm
+                    certifications={
+                      resumeData.certifications
+                    }
+                    addCertification={addCertification}
+                    updateCertification={
+                      updateCertification
+                    }
+                    removeCertification={
+                      removeCertification
+                    }
+                  />
+                </div>
+                {resumeId && (
+                  <div
+                    id="version-history"
+                    className="mt-6 scroll-mt-28"
+                  >
+                    <ResumeVersionHistory
+                      resumeId={resumeId}
+                      resumeData={resumeData}
+                      restoreResumeVersion={
+                        restoreResumeVersion
+                      }
+                    />
+                  </div>
+                )}
               </div>
 
-              <ResumePreview resumeData={resumeData} />
-            </aside>
-          </section>
+              <aside className="rounded-[28px] border border-white/10 bg-white/[0.035] p-4 sm:p-6 2xl:sticky 2xl:top-28">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-semibold">
+                      Live preview
+                    </h2>
+
+                    <p className="mt-1 text-sm text-white/40">
+                      {getTemplateDescription(
+                        resumeData.template,
+                      )}
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">
+                    Autosaved
+                  </span>
+                </div>
+
+                <ResumePreview resumeData={resumeData} />
+              </aside>
+            </section>
+          </div>
         </div>
-      </div>
       </main>
 
       <div className="resume-print-root">
@@ -559,20 +596,18 @@ function SectionNavigationItem({
   return (
     <a
       href={href}
-      className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm transition ${
-        active
-          ? "bg-white/[0.07] text-white"
-          : "text-white/45 hover:bg-white/[0.045] hover:text-white"
-      }`}
+      className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm transition ${active
+        ? "bg-white/[0.07] text-white"
+        : "text-white/45 hover:bg-white/[0.045] hover:text-white"
+        }`}
     >
       <span
-        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-[11px] font-semibold ${
-          complete
-            ? "bg-emerald-400/10 text-emerald-300"
-            : active
-              ? "bg-violet-400/15 text-violet-300"
-              : "bg-white/[0.05] text-white/30"
-        }`}
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-[11px] font-semibold ${complete
+          ? "bg-emerald-400/10 text-emerald-300"
+          : active
+            ? "bg-violet-400/15 text-violet-300"
+            : "bg-white/[0.05] text-white/30"
+          }`}
       >
         {complete ? <Check size={14} /> : number}
       </span>
@@ -658,26 +693,24 @@ function ResumePreview({
         <div className={templateStyles.content}>
           {(personalDetails.professionalSummary ||
             workExperience.length === 0) && (
-            <PreviewSection
-              title="Professional Summary"
-              template={template}
-            >
-              <p
-                className={`whitespace-pre-line leading-6 ${
-                  template === "minimal"
+              <PreviewSection
+                title="Professional Summary"
+                template={template}
+              >
+                <p
+                  className={`whitespace-pre-line leading-6 ${template === "minimal"
                     ? "text-xs"
                     : "text-sm"
-                } ${
-                  personalDetails.professionalSummary
-                    ? "text-black/75"
-                    : "text-black/35"
-                }`}
-              >
-                {personalDetails.professionalSummary ||
-                  "Your professional summary will appear here as you complete the form."}
-              </p>
-            </PreviewSection>
-          )}
+                    } ${personalDetails.professionalSummary
+                      ? "text-black/75"
+                      : "text-black/35"
+                    }`}
+                >
+                  {personalDetails.professionalSummary ||
+                    "Your professional summary will appear here as you complete the form."}
+                </p>
+              </PreviewSection>
+            )}
 
           <PreviewSection
             title="Experience"

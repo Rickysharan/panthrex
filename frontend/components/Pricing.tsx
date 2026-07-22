@@ -57,7 +57,7 @@ export default function Pricing() {
         </h2>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg text-white/60">
-          Start for free and upgrade whenever you're ready.
+          {"Start for free and upgrade whenever you're ready."}
         </p>
       </div>
 

@@ -123,6 +123,10 @@ function normalizeCoverLetterData(
 function readStoredCoverLetterData():
   | CoverLetterData
   | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
   try {
     const storedValue =
       window.localStorage.getItem(STORAGE_KEY);
@@ -150,25 +154,15 @@ function readStoredCoverLetterData():
 export function useCoverLetter() {
   const [coverLetterData, setCoverLetterData] =
     useState<CoverLetterData>(() =>
+      readStoredCoverLetterData() ??
       createDefaultCoverLetterData(),
     );
 
   const [lastSavedAt, setLastSavedAt] =
     useState<Date | null>(null);
 
-  const [hasLoadedStorage, setHasLoadedStorage] =
-    useState(false);
-
-  useEffect(() => {
-    const storedCoverLetter =
-      readStoredCoverLetterData();
-
-    if (storedCoverLetter) {
-      setCoverLetterData(storedCoverLetter);
-    }
-
-    setHasLoadedStorage(true);
-  }, []);
+  const [hasLoadedStorage] =
+    useState(true);
 
   useEffect(() => {
     if (!hasLoadedStorage) {

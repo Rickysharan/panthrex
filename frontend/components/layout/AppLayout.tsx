@@ -110,9 +110,7 @@ export default function AppLayout({
     currentNavigationItem?.label ??
     "Panthrex";
 
-  useEffect(() => {
-    setMobileNavigationOpen(false);
-  }, [pathname]);
+  
 
   useEffect(() => {
     if (!mobileNavigationOpen) {
@@ -133,7 +131,10 @@ export default function AppLayout({
   return (
     <div className="min-h-screen bg-[#050816] text-white">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-white/10 bg-[#080c1c] lg:flex lg:flex-col">
-        <SidebarContent pathname={pathname} />
+        <SidebarContent
+          pathname={pathname}
+          onNavigate={() => setMobileNavigationOpen(false)}
+        />
       </aside>
 
       {mobileNavigationOpen && (
@@ -159,7 +160,10 @@ export default function AppLayout({
               <X size={20} />
             </button>
 
-            <SidebarContent pathname={pathname} />
+            <SidebarContent
+              pathname={pathname}
+              onNavigate={() => setMobileNavigationOpen(false)}
+            />
           </aside>
         </div>
       )}
@@ -255,14 +259,17 @@ export default function AppLayout({
 
 function SidebarContent({
   pathname,
+  onNavigate,
 }: {
   pathname: string;
+  onNavigate: () => void;
 }) {
   return (
     <>
       <div className="flex h-20 items-center border-b border-white/10 px-6">
         <Link
           href="/dashboard"
+          onClick={onNavigate}
           className="flex items-center gap-3"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-black shadow-lg shadow-white/10">
@@ -303,6 +310,7 @@ function SidebarContent({
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onNavigate}
                 aria-current={
                   active ? "page" : undefined
                 }

@@ -2,7 +2,6 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -137,12 +136,10 @@ function writeSettings(settings: AccountSettings) {
 
 export function useSettings() {
   const [settings, setSettings] =
-    useState<AccountSettings>(
-      DEFAULT_ACCOUNT_SETTINGS,
-    );
+    useState<AccountSettings>(readSettings);
 
-  const [isLoaded, setIsLoaded] =
-    useState(false);
+  const [isLoaded] =
+    useState(true);
 
   const [saveStatus, setSaveStatus] =
     useState<SettingsState["saveStatus"]>(
@@ -152,10 +149,7 @@ export function useSettings() {
   const [error, setError] =
     useState<string | null>(null);
 
-  useEffect(() => {
-    setSettings(readSettings());
-    setIsLoaded(true);
-  }, []);
+
 
   const persistSettings = useCallback(
     (nextSettings: AccountSettings) => {
@@ -305,16 +299,14 @@ export function useSettings() {
     }
   }, []);
 
-  const state: SettingsState = {
-    settings,
-    isLoaded,
-    saveStatus,
-    error,
-  };
+
 
   return useMemo(
     () => ({
-      ...state,
+      settings,
+      isLoaded,
+      saveStatus,
+      error,
       updateProfile,
       updateAppearance,
       updateNotifications,
@@ -325,7 +317,10 @@ export function useSettings() {
       resetSettings,
     }),
     [
-      state,
+      settings,
+      isLoaded,
+      saveStatus,
+      error,
       updateProfile,
       updateAppearance,
       updateNotifications,
