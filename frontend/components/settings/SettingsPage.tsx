@@ -5,13 +5,17 @@ import {
   Bot,
   BriefcaseBusiness,
   Check,
+  CreditCard,
   Monitor,
   RotateCcw,
   Save,
   UserRound,
 } from "lucide-react";
+import Link from "next/link";
 
 import AppLayout from "@/components/layout/AppLayout";
+import PlanStatusCard from "@/components/billing/PlanStatusCard";
+import { useEntitlements } from "@/lib/access/useEntitlements";
 import { useSettings } from "@/lib/settings/useSettings";
 
 export default function SettingsPage() {
@@ -28,6 +32,8 @@ export default function SettingsPage() {
     saveSettings,
     resetSettings,
   } = useSettings();
+
+  const { entitlements } = useEntitlements();
 
   if (!isLoaded) {
     return (
@@ -142,6 +148,36 @@ export default function SettingsPage() {
               }
             />
           </div>
+        </SettingsSection>
+
+        <SettingsSection
+          icon={CreditCard}
+          title="Subscription"
+          description="Manage your Panthrex plan, premium access and billing."
+        >
+          <PlanStatusCard
+            entitlements={entitlements}
+          />
+
+          {!entitlements?.premium && (
+            <div className="mt-4 rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4">
+              <p className="text-sm font-semibold text-indigo-200">
+                Upgrade to Panthrex Pro 🚀
+              </p>
+
+              <p className="mt-1 text-xs leading-5 text-white/45">
+                Unlock premium AI resume writing, ATS optimisation,
+                job matching and interview preparation tools.
+              </p>
+
+              <Link
+                href="/#pricing"
+                className="mt-3 inline-flex rounded-xl bg-indigo-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-400"
+              >
+                View plans
+              </Link>
+            </div>
+          )}
         </SettingsSection>
 
         <SettingsSection

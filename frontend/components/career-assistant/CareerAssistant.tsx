@@ -85,6 +85,9 @@ export default function CareerAssistant() {
   const messagesEndRef =
     useRef<HTMLDivElement>(null);
 
+  const inputRef =
+    useRef<HTMLInputElement>(null);
+
   const [isOpen, setIsOpen] =
     useState(false);
 
@@ -105,6 +108,39 @@ export default function CareerAssistant() {
 
   const [isResponding, setIsResponding] =
     useState(false);
+
+  useEffect(() => {
+    function handleOpenAssistant(
+      event: Event,
+    ) {
+      const customEvent =
+        event as CustomEvent<{
+          query?: string;
+        }>;
+
+      setIsOpen(true);
+
+      if (customEvent.detail?.query) {
+        setInput(customEvent.detail.query);
+      }
+
+      window.setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+
+    window.addEventListener(
+      "panthrex:open-career-assistant",
+      handleOpenAssistant,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "panthrex:open-career-assistant",
+        handleOpenAssistant,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     const storedConversation =
@@ -492,6 +528,7 @@ export default function CareerAssistant() {
               </span>
 
               <input
+                ref={inputRef}
                 type="text"
                 value={input}
                 maxLength={2000}

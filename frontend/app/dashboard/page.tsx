@@ -1,6 +1,6 @@
 "use client";
 
-import UserProfileMenu from "@/components/auth/UserProfileMenu";
+import AppLayout from "@/components/layout/AppLayout";
 import {
   AlertTriangle,
   ArrowRight,
@@ -9,6 +9,7 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   CircleUserRound,
   Clock3,
   FileCheck2,
@@ -26,7 +27,6 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
 
 import type {
   DashboardNotification,
@@ -37,51 +37,6 @@ import type {
   JobApplication,
   JobApplicationStatus,
 } from "@/lib/job-tracker/types";
-
-const navigationItems = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-    active: true,
-  },
-  {
-    label: "Resume Builder",
-    href: "/resume-builder",
-    icon: FileText,
-    active: false,
-  },
-  {
-    label: "AI Resume Writer",
-    href: "/ai-resume",
-    icon: WandSparkles,
-    active: false,
-  },
-  {
-    label: "ATS Score",
-    href: "/ats-score",
-    icon: Target,
-    active: false,
-  },
-  {
-    label: "Interview Coach",
-    href: "/interview-prep",
-    icon: MessageSquareText,
-    active: false,
-  },
-  {
-    label: "Job Matches",
-    href: "/job-matching",
-    icon: BriefcaseBusiness,
-    active: false,
-  },
-  {
-    label: "Applications",
-    href: "/job-tracker",
-    icon: FileCheck2,
-    active: false,
-  },
-];
 
 const statusLabels: Record<JobApplicationStatus, string> = {
   wishlist: "Wishlist",
@@ -192,14 +147,6 @@ function getMetricChange(
 }
 
 export default function DashboardPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] =
-    useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const notificationPanelRef =
-    useRef<HTMLDivElement>(null);
-
   const {
     profile,
     recentApplications,
@@ -219,25 +166,6 @@ export default function DashboardPage() {
     atsHistoryError,
   } = useDashboardData();
 
-  const filteredApplications = useMemo(() => {
-    const normalizedQuery =
-      searchQuery.trim().toLowerCase();
-
-    if (!normalizedQuery) {
-      return recentApplications;
-    }
-
-    return recentApplications.filter((application) => {
-      return [
-        application.companyName,
-        application.jobTitle,
-        statusLabels[application.status],
-      ].some((value) =>
-        value.toLowerCase().includes(normalizedQuery),
-      );
-    });
-  }, [recentApplications, searchQuery]);
-
   const maximumActivity = Math.max(
     1,
     ...applicationActivity.map(
@@ -246,174 +174,22 @@ export default function DashboardPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#050816] text-white">
-      <div
-        aria-hidden="true"
-        className="fixed left-[-160px] top-[-150px] h-[420px] w-[420px] rounded-full bg-violet-600/15 blur-[140px]"
-      />
-
-      <div
-        aria-hidden="true"
-        className="fixed bottom-[-180px] right-[-140px] h-[440px] w-[440px] rounded-full bg-blue-500/10 blur-[150px]"
-      />
-
-      {sidebarOpen ? (
-        <button
-          type="button"
-          aria-label="Close sidebar"
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+    <AppLayout
+      title="Dashboard"
+      description="Track applications, improve your resume and prepare for interviews."
+    >
+      <main className="relative min-h-screen overflow-hidden bg-[#050816] text-white">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed left-[-160px] top-[-150px] h-[420px] w-[420px] rounded-full bg-violet-600/15 blur-[140px]"
         />
-      ) : null}
 
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/10 bg-[#070a18]/95 p-5 backdrop-blur-2xl transition-transform duration-300 lg:translate-x-0 ${
-          sidebarOpen
-            ? "translate-x-0"
-            : "-translate-x-full"
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[#050816]">
-              <Sparkles size={21} />
-            </span>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed bottom-[-180px] right-[-140px] h-[440px] w-[440px] rounded-full bg-blue-500/10 blur-[150px]"
+        />
 
-            <div>
-              <p className="text-lg font-bold tracking-tight">
-                Panthrex
-              </p>
-
-              <p className="text-xs text-white/35">
-                Career Intelligence
-              </p>
-            </div>
-          </Link>
-
-          <button
-            type="button"
-            aria-label="Close sidebar"
-            onClick={() => setSidebarOpen(false)}
-            className="rounded-xl p-2 text-white/50 transition hover:bg-white/5 hover:text-white lg:hidden"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <nav className="mt-10 space-y-2">
-          {navigationItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium transition ${
-                  item.active
-                    ? "bg-white text-[#050816]"
-                    : "text-white/55 hover:bg-white/[0.055] hover:text-white"
-                }`}
-              >
-                <Icon size={19} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="mt-auto rounded-3xl border border-violet-400/20 bg-violet-400/[0.075] p-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-400/15 text-violet-300">
-            <WandSparkles size={19} />
-          </div>
-
-          <h3 className="mt-4 font-semibold">
-            Upgrade your workflow
-          </h3>
-
-          <p className="mt-2 text-sm leading-6 text-white/45">
-            Unlock additional AI tools, optimisation
-            features and career intelligence.
-          </p>
-
-          <Link
-            href="/settings"
-            className="mt-5 flex w-full items-center justify-center rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#050816] transition hover:bg-white/90"
-          >
-            Manage plan
-          </Link>
-        </div>
-      </aside>
-
-      <div className="relative z-10 lg:pl-72">
-        <header className="sticky top-0 z-30 border-b border-white/10 bg-[#050816]/80 px-5 py-4 backdrop-blur-2xl sm:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                aria-label="Open sidebar"
-                onClick={() => setSidebarOpen(true)}
-                className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-white/70 lg:hidden"
-              >
-                <Menu size={20} />
-              </button>
-
-              <div className="relative hidden sm:block">
-                <Search
-                  size={17}
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/30"
-                />
-
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(event) =>
-                    setSearchQuery(event.target.value)
-                  }
-                  placeholder="Search recent applications"
-                  className="h-11 w-[330px] rounded-2xl border border-white/10 bg-white/[0.04] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-violet-400/50 focus:bg-white/[0.06]"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div
-                ref={notificationPanelRef}
-                className="relative"
-              >
-                <button
-                  type="button"
-                  aria-label="Notifications"
-                  aria-expanded={notificationsOpen}
-                  onClick={() =>
-                    setNotificationsOpen(
-                      (current) => !current,
-                    )
-                  }
-                  className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:bg-white/[0.07] hover:text-white"
-                >
-                  <Bell size={19} />
-
-                  {notifications.length > 0 ? (
-                    <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-violet-400" />
-                  ) : null}
-                </button>
-
-                {notificationsOpen ? (
-                  <NotificationPanel
-                    notifications={notifications}
-                    onClose={() =>
-                      setNotificationsOpen(false)
-                    }
-                  />
-                ) : null}
-              </div>
-
-              <UserProfileMenu />
-            </div>
-          </div>
-        </header>
-
+        <div className="relative z-10">
         <div className="px-5 py-8 sm:px-8 lg:px-10">
           <section className="flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
             <div>
@@ -640,7 +416,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
 
-              {filteredApplications.length > 0 ? (
+              {recentApplications.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[680px] text-left">
                     <thead>
@@ -666,7 +442,7 @@ export default function DashboardPage() {
                     </thead>
 
                     <tbody>
-                      {filteredApplications.map(
+                      {recentApplications.map(
                         (application) => (
                           <ApplicationRow
                             key={application.id}
@@ -679,9 +455,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <EmptyApplications
-                  hasSearchQuery={Boolean(
-                    searchQuery.trim(),
-                  )}
+                  hasSearchQuery={false}
                 />
               )}
             </div>
@@ -834,8 +608,9 @@ export default function DashboardPage() {
             />
           </section>
         </div>
-      </div>
-    </main>
+        </div>
+      </main>
+    </AppLayout>
   );
 }
 

@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 
 import LogoutButton from "@/components/auth/LogoutButton";
 import { createClient } from "@/lib/supabase/client";
+import { useEntitlements } from "@/lib/access/useEntitlements";
 
 type UserProfile = {
   fullName: string;
@@ -26,6 +27,35 @@ const fallbackProfile: UserProfile = {
   email: "",
   initial: "P",
 };
+
+function getPlanLabel(
+  entitlements: {
+    premium: boolean;
+    tier:
+      | "free"
+      | "welcome_trial"
+      | "day_pass"
+      | "premium";
+  } | null,
+): string {
+  if (!entitlements) {
+    return "";
+  }
+
+  if (entitlements.tier === "premium") {
+    return "🟣 Panthrex Pro";
+  }
+
+  if (entitlements.tier === "day_pass") {
+    return "⚡ 1-Day Premium Access";
+  }
+
+  if (entitlements.tier === "welcome_trial") {
+    return "🎁 Welcome Trial";
+  }
+
+  return "Free Plan";
+}
 
 function buildUserProfile(
   fullNameValue: unknown,
@@ -57,6 +87,11 @@ export default function UserProfileMenu({
   onProfileLoaded,
 }: UserProfileMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const {
+    entitlements,
+    loading: entitlementsLoading,
+  } = useEntitlements();
 
   const [profile, setProfile] =
     useState<UserProfile>(fallbackProfile);
@@ -167,8 +202,15 @@ export default function UserProfileMenu({
           </p>
 
           <p className="truncate text-xs text-white/35">
-            {profile.email || "Free plan"}
+            {profile.email}
           </p>
+
+          {!entitlementsLoading &&
+            entitlements && (
+              <p className="mt-1 text-xs font-semibold text-indigo-300">
+                {getPlanLabel(entitlements)}
+              </p>
+            )}
         </div>
 
         <ChevronDown
@@ -197,6 +239,12 @@ export default function UserProfileMenu({
               <p className="mt-0.5 truncate text-xs text-white/40">
                 {profile.email || "No email available"}
               </p>
+
+              {!entitlementsLoading && entitlements && (
+                <p className="mt-2 text-xs font-semibold text-indigo-300">
+                  {getPlanLabel(entitlements)}
+                </p>
+              )}
             </div>
           </div>
 

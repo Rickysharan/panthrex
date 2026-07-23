@@ -219,6 +219,35 @@ type DayPassInsert = {
 
 type DayPassUpdate = Partial<DayPassInsert>;
 
+
+type NotificationRow = {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  description: string;
+  href: string | null;
+  metadata: Json;
+  read_at: string | null;
+  created_at: string;
+};
+
+type NotificationInsert = {
+  id?: string;
+  user_id: string;
+  type?: string;
+  title: string;
+  description: string;
+  href?: string | null;
+  metadata?: Json;
+  read_at?: string | null;
+  created_at?: string;
+};
+
+type NotificationUpdate = Partial<
+  Omit<NotificationInsert, "id" | "user_id">
+>;
+
 type Database = {
   public: {
     Tables: {
@@ -256,6 +285,13 @@ type Database = {
         Row: ApiUsageRow;
         Insert: ApiUsageInsert;
         Update: ApiUsageUpdate;
+        Relationships: [];
+      };
+
+      notifications: {
+        Row: NotificationRow;
+        Insert: NotificationInsert;
+        Update: NotificationUpdate;
         Relationships: [];
       };
     };

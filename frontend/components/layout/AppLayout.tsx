@@ -2,30 +2,35 @@
 
 import UserProfileMenu from "@/components/auth/UserProfileMenu";
 import CareerAssistant from "@/components/career-assistant/CareerAssistant";
+import GlobalSearch from "@/components/search/GlobalSearch";
+import PlanStatusCard from "@/components/billing/PlanStatusCard";
+import PremiumWelcomeBanner from "@/components/billing/PremiumWelcomeBanner";
+import OnboardingModal from "@/components/onboarding/OnboardingModal";
+import ProductTour from "@/components/onboarding/ProductTour";
+import { useEntitlements } from "@/lib/access/useEntitlements";
+import { createClient } from "@/lib/supabase/client";
+import {
+  accountNavigationItems,
+  appNavigationItems,
+  findNavigationItemByPath,
+} from "@/lib/navigation/navigation";
 import {
   Bell,
-  BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
-  FilePenLine,
-  FileSearch,
-  FileText,
-  Gauge,
-  LogOut,
   Menu,
-  MessageSquareText,
   ScanSearch,
-  Search,
   Sparkles,
   Target,
-  WandSparkles,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   type ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -38,103 +43,120 @@ type AppLayoutProps = {
   description?: string;
 };
 
-type NavigationItem = {
-  label: string;
-  href: string;
-  icon: typeof Gauge;
-};
-
 type NotificationItem = {
-  id: number;
+  id: string;
+  type: string;
   title: string;
   description: string;
-  time: string;
+  href: string | null;
   read: boolean;
+  time: string;
   icon: typeof Bell;
 };
 
-const navigationItems: NavigationItem[] = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: Gauge,
-  },
-  {
-    label: "Resume Builder",
-    href: "/resume-builder",
-    icon: FileText,
-  },
-  {
-    label: "ATS Resume Score",
-    href: "/ats-score",
-    icon: ScanSearch,
-  },
-  {
-    label: "Resume Enhancer",
-    href: "/resume-enhancer",
-    icon: WandSparkles,
-  },
-  {
-    label: "Cover Letter",
-    href: "/cover-letter",
-    icon: FilePenLine,
-  },
-  {
-    label: "AI Job Search",
-    href: "/job-search",
-    icon: Search,
-  },
-  {
-    label: "Saved Jobs",
-    href: "/saved-jobs",
-    icon: FileSearch,
-  },
-  {
-    label: "Job Tracker",
-    href: "/job-tracker",
-    icon: BriefcaseBusiness,
-  },
-  {
-    label: "Resume Tailor",
-    href: "/resume-tailor",
-    icon: Target,
-  },
-  {
-    label: "Interview Coach",
-    href: "/interview-prep",
-    icon: MessageSquareText,
-  },
-];
+type NotificationApiItem = {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  href: string | null;
+  metadata: unknown;
+  read_at: string | null;
+  created_at: string;
+};
 
-const initialNotifications: NotificationItem[] = [
-  {
-    id: 1,
-    title: "Resume score completed",
-    description:
-      "Your latest resume analysis is ready to review.",
-    time: "Just now",
-    read: false,
-    icon: ScanSearch,
-  },
-  {
-    id: 2,
-    title: "Profile improvement available",
-    description:
-      "Add more skills and project details to strengthen your profile.",
-    time: "2 hours ago",
-    read: false,
-    icon: Target,
-  },
-  {
-    id: 3,
-    title: "Application reminder",
-    description:
-      "Review your upcoming application tasks.",
-    time: "Yesterday",
-    read: true,
-    icon: CalendarDays,
-  },
-];
+function getNotificationIcon(type: string) {
+  switch (type) {
+    case "ats_score":
+    case "resume_analysis":
+      return ScanSearch;
+
+    case "profile":
+    case "profile_improvement":
+      return Target;
+
+    case "application":
+    case "application_reminder":
+      return CalendarDays;
+
+    default:
+      return Bell;
+  }
+}
+
+function formatNotificationTime(createdAt: string) {
+  const createdTime = new Date(createdAt).getTime();
+
+  if (Number.isNaN(createdTime)) {
+    return "";
+  }
+
+  const elapsedSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - createdTime) / 1000),
+  );
+
+  if (elapsedSeconds < 60) {
+    return "Just now";
+  }
+
+  const elapsedMinutes = Math.floor(
+    elapsedSeconds / 60,
+  );
+
+  if (elapsedMinutes < 60) {
+    return `${elapsedMinutes} minute${
+      elapsedMinutes === 1 ? "" : "s"
+    } ago`;
+  }
+
+  const elapsedHours = Math.floor(
+    elapsedMinutes / 60,
+  );
+
+  if (elapsedHours < 24) {
+    return `${elapsedHours} hour${
+      elapsedHours === 1 ? "" : "s"
+    } ago`;
+  }
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+
+  if (elapsedDays === 1) {
+    return "Yesterday";
+  }
+
+  if (elapsedDays < 7) {
+    return `${elapsedDays} days ago`;
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year:
+      new Date(createdAt).getFullYear() ===
+      new Date().getFullYear()
+        ? undefined
+        : "numeric",
+  }).format(new Date(createdAt));
+}
+
+function mapNotification(
+  notification: NotificationApiItem,
+): NotificationItem {
+  return {
+    id: notification.id,
+    type: notification.type,
+    title: notification.title,
+    description: notification.description,
+    href: notification.href,
+    read: notification.read_at !== null,
+    time: formatNotificationTime(
+      notification.created_at,
+    ),
+    icon: getNotificationIcon(notification.type),
+  };
+}
 
 export default function AppLayout({
   children,
@@ -142,6 +164,30 @@ export default function AppLayout({
   description,
 }: AppLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const {
+    entitlements,
+  } = useEntitlements();
+
+  const [showOnboarding, setShowOnboarding] =
+    useState(false);
+
+  const [onboardingUserId, setOnboardingUserId] =
+    useState<string | null>(null);
+
+  const [showProductTour, setShowProductTour] =
+    useState(() => {
+      if (typeof window === "undefined") {
+        return false;
+      }
+
+      return (
+        localStorage.getItem(
+          "panthrex_product_tour_completed",
+        ) !== "true"
+      );
+    });
 
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -151,16 +197,51 @@ export default function AppLayout({
   const [notificationsOpen, setNotificationsOpen] =
     useState(false);
 
+  useEffect(() => {
+    async function checkOnboarding() {
+      const supabase = createClient();
+
+      const {
+        data: {
+          user,
+        },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        return;
+      }
+
+      const {
+        data: profile,
+      } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("id", user.id)
+        .single();
+
+      if (
+        profile &&
+        !profile.onboarding_completed
+      ) {
+        setOnboardingUserId(user.id);
+        setShowOnboarding(true);
+      }
+    }
+
+    void checkOnboarding();
+  }, []);
+
   const [notifications, setNotifications] =
-    useState<NotificationItem[]>(initialNotifications);
+    useState<NotificationItem[]>([]);
+
+  const [notificationsLoading, setNotificationsLoading] =
+    useState(true);
+
+  const [notificationsError, setNotificationsError] =
+    useState<string | null>(null);
 
   const currentNavigationItem = useMemo(
-    () =>
-      navigationItems.find(
-        (item) =>
-          pathname === item.href ||
-          pathname.startsWith(`${item.href}/`),
-      ),
+    () => findNavigationItemByPath(pathname),
     [pathname],
   );
 
@@ -172,6 +253,139 @@ export default function AppLayout({
   const unreadNotificationCount = notifications.filter(
     (notification) => !notification.read,
   ).length;
+
+  const loadNotifications = useCallback(async () => {
+    setNotificationsLoading(true);
+    setNotificationsError(null);
+
+    try {
+      const response = await fetch(
+        "/api/notifications",
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
+
+      const payload = (await response.json()) as {
+        notifications?: NotificationApiItem[];
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          payload.error ??
+            "Failed to load notifications",
+        );
+      }
+
+      setNotifications(
+        (payload.notifications ?? []).map(
+          mapNotification,
+        ),
+      );
+    } catch (error) {
+      setNotificationsError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load notifications",
+      );
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadNotifications();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let channel:
+      | ReturnType<typeof supabase.channel>
+      | null = null;
+    let cancelled = false;
+
+    async function subscribeToNotifications() {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (cancelled) {
+        return;
+      }
+
+      if (error) {
+        console.error(
+          "Failed to initialise notification realtime subscription:",
+          error,
+        );
+        return;
+      }
+
+      if (!user) {
+        return;
+      }
+
+      channel = supabase
+        .channel(`notifications:${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            void loadNotifications();
+
+            if (payload.eventType !== "INSERT") {
+              return;
+            }
+
+            const notification =
+              payload.new as NotificationApiItem;
+
+            toast(notification.title, {
+              description: notification.description,
+              action: notification.href
+                ? {
+                    label: "Open",
+                    onClick: () => {
+                      router.push(notification.href!);
+                    },
+                  }
+                : undefined,
+            });
+          },
+        )
+        .subscribe((status) => {
+          if (status === "CHANNEL_ERROR") {
+            console.error(
+              "Notification realtime subscription failed.",
+            );
+          }
+        });
+    }
+
+    void subscribeToNotifications();
+
+    return () => {
+      cancelled = true;
+
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
+    };
+  }, [loadNotifications, router]);
 
   useEffect(() => {
     if (!mobileNavigationOpen) {
@@ -235,28 +449,108 @@ export default function AppLayout({
     setNotificationsOpen((current) => !current);
   }
 
-  function markAllNotificationsAsRead() {
+  async function markAllNotificationsAsRead() {
+    const previousNotifications = notifications;
+
     setNotifications((currentNotifications) =>
       currentNotifications.map((notification) => ({
         ...notification,
         read: true,
       })),
     );
+
+    try {
+      const response = await fetch(
+        "/api/notifications",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            markAllRead: true,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to mark notifications as read",
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      setNotifications(previousNotifications);
+    }
   }
 
-  function markNotificationAsRead(
-    notificationId: number,
+  async function markNotificationAsRead(
+    notificationId: string,
   ) {
+    const notification = notifications.find(
+      (item) => item.id === notificationId,
+    );
+
+    if (!notification || notification.read) {
+      return;
+    }
+
     setNotifications((currentNotifications) =>
-      currentNotifications.map((notification) =>
-        notification.id === notificationId
+      currentNotifications.map((item) =>
+        item.id === notificationId
           ? {
-              ...notification,
+              ...item,
               read: true,
             }
-          : notification,
+          : item,
       ),
     );
+
+    try {
+      const response = await fetch(
+        "/api/notifications",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            notificationId,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to mark notification as read",
+        );
+      }
+    } catch (error) {
+      console.error(error);
+
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((item) =>
+          item.id === notificationId
+            ? {
+                ...item,
+                read: false,
+              }
+            : item,
+        ),
+      );
+    }
+  }
+
+  async function handleNotificationClick(
+    notification: NotificationItem,
+  ) {
+    await markNotificationAsRead(notification.id);
+
+    setNotificationsOpen(false);
+
+    if (notification.href) {
+      router.push(notification.href);
+    }
   }
 
   return (
@@ -264,6 +558,7 @@ export default function AppLayout({
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-white/10 bg-[#080c1c] lg:flex lg:flex-col">
         <SidebarContent
           pathname={pathname}
+          entitlements={entitlements}
           onNavigate={() =>
             setMobileNavigationOpen(false)
           }
@@ -295,6 +590,7 @@ export default function AppLayout({
 
             <SidebarContent
               pathname={pathname}
+              entitlements={entitlements}
               onNavigate={() =>
                 setMobileNavigationOpen(false)
               }
@@ -339,23 +635,8 @@ export default function AppLayout({
               )}
             </div>
 
-            <div className="hidden max-w-sm flex-1 md:block">
-              <label className="relative block">
-                <span className="sr-only">
-                  Search Panthrex
-                </span>
-
-                <Search
-                  size={17}
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-white/35"
-                />
-
-                <input
-                  type="search"
-                  placeholder="Search Panthrex"
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-indigo-500/70 focus:bg-white/[0.06]"
-                />
-              </label>
+            <div className="hidden max-w-md flex-1 md:block">
+              <GlobalSearch />
             </div>
 
             <div
@@ -405,8 +686,8 @@ export default function AppLayout({
                     {unreadNotificationCount > 0 && (
                       <button
                         type="button"
-                        onClick={
-                          markAllNotificationsAsRead
+                        onClick={() =>
+                          void markAllNotificationsAsRead()
                         }
                         className="text-xs font-semibold text-indigo-300 transition hover:text-indigo-200"
                       >
@@ -416,7 +697,29 @@ export default function AppLayout({
                   </div>
 
                   <div className="max-h-[420px] overflow-y-auto p-2">
-                    {notifications.length > 0 ? (
+                    {notificationsLoading ? (
+                      <div className="flex flex-col items-center px-6 py-10 text-center">
+                        <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-indigo-300" />
+
+                        <p className="mt-4 text-sm font-medium text-white/60">
+                          Loading notifications...
+                        </p>
+                      </div>
+                    ) : notificationsError ? (
+                      <div className="flex flex-col items-center px-6 py-10 text-center">
+                        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-400/10 text-red-300">
+                          <Bell size={22} />
+                        </span>
+
+                        <p className="mt-4 text-sm font-semibold">
+                          Notifications unavailable
+                        </p>
+
+                        <p className="mt-1 text-xs text-white/40">
+                          {notificationsError}
+                        </p>
+                      </div>
+                    ) : notifications.length > 0 ? (
                       notifications.map(
                         (notification) => {
                           const Icon =
@@ -428,8 +731,8 @@ export default function AppLayout({
                               type="button"
                               role="menuitem"
                               onClick={() =>
-                                markNotificationAsRead(
-                                  notification.id,
+                                void handleNotificationClick(
+                                  notification,
                                 )
                               }
                               className={`flex w-full gap-3 rounded-xl p-3 text-left transition ${
@@ -518,9 +821,47 @@ export default function AppLayout({
         </header>
 
         <main className="min-h-[calc(100vh-5rem)]">
+          <div className="px-4 pt-6 sm:px-6 lg:px-8">
+            {entitlements?.premium && (
+              <PremiumWelcomeBanner
+                tier={
+                  entitlements.tier === "free"
+                    ? "premium"
+                    : entitlements.tier
+                }
+                expiry={
+                  entitlements.subscription.expiresAt ??
+                  entitlements.premiumUntil ??
+                  entitlements.welcomeTrial.endsAt ??
+                  entitlements.dayPass.expiresAt
+                }
+              />
+            )}
+          </div>
+
           {children}
         </main>
       </div>
+
+      {showOnboarding &&
+        onboardingUserId && (
+          <OnboardingModal
+            userId={onboardingUserId}
+          />
+        )}
+
+      {showProductTour && (
+        <ProductTour
+          onComplete={() => {
+            localStorage.setItem(
+              "panthrex_product_tour_completed",
+              "true",
+            );
+
+            setShowProductTour(false);
+          }}
+        />
+      )}
 
       <CareerAssistant />
     </div>
@@ -529,9 +870,38 @@ export default function AppLayout({
 
 function SidebarContent({
   pathname,
+  entitlements,
   onNavigate,
 }: {
   pathname: string;
+  entitlements: {
+    tier:
+      | "free"
+      | "welcome_trial"
+      | "day_pass"
+      | "premium";
+
+    premium: boolean;
+
+    welcomeTrial: {
+      active: boolean;
+      used: boolean;
+      startedAt: string | null;
+      endsAt: string | null;
+    };
+
+    dayPass: {
+      active: boolean;
+      expiresAt: string | null;
+    };
+
+    subscription: {
+      active: boolean;
+      expiresAt: string | null;
+    };
+
+    premiumUntil: string | null;
+  } | null;
   onNavigate: () => void;
 }) {
   return (
@@ -567,7 +937,7 @@ function SidebarContent({
           aria-label="Application navigation"
           className="mt-3 space-y-1"
         >
-          {navigationItems.map((item) => {
+          {appNavigationItems.map((item) => {
             const Icon = item.icon;
 
             const active =
@@ -609,34 +979,59 @@ function SidebarContent({
             );
           })}
         </nav>
+
+        <p className="mt-8 px-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/30">
+          Account
+        </p>
+
+        <nav
+          aria-label="Account navigation"
+          className="mt-3 space-y-1"
+        >
+          {accountNavigationItems.map((item) => {
+            const Icon = item.icon;
+
+            const active =
+              pathname === item.href ||
+              pathname.startsWith(`${item.href}/`);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${
+                  active
+                    ? "bg-indigo-500/15 text-indigo-200 ring-1 ring-inset ring-indigo-400/20"
+                    : "text-white/55 hover:bg-white/[0.06] hover:text-white"
+                }`}
+              >
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
+                    active
+                      ? "bg-indigo-500 text-white"
+                      : "bg-white/[0.04] text-white/45 group-hover:bg-white/10 group-hover:text-white"
+                  }`}
+                >
+                  <Icon size={18} />
+                </span>
+
+                <span>{item.label}</span>
+
+                {active && (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
 
       <div className="border-t border-white/10 p-4">
-        <div className="mb-3 rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4">
-          <p className="text-sm font-semibold text-indigo-200">
-            Panthrex Pro
-          </p>
-
-          <p className="mt-1 text-xs leading-5 text-white/45">
-            Unlock unlimited AI tailoring, matching,
-            and interview preparation.
-          </p>
-
-          <Link
-            href="/settings"
-            className="mt-3 block w-full rounded-xl bg-indigo-500 px-3 py-2 text-center text-xs font-semibold text-white transition hover:bg-indigo-400"
-          >
-            Upgrade plan
-          </Link>
-        </div>
-
-        <Link
-          href="/"
-          className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-white/50 transition hover:bg-red-500/10 hover:text-red-300"
-        >
-          <LogOut size={18} />
-          Return to website
-        </Link>
+        <PlanStatusCard
+          entitlements={entitlements}
+        />
       </div>
     </>
   );

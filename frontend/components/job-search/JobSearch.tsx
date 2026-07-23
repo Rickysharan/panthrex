@@ -147,7 +147,7 @@ export default function JobSearch() {
     return getTrackedApplication(job) !== null;
   }
 
-  function trackJob(job: JobSearchResult) {
+  async function trackJob(job: JobSearchResult) {
     const existingApplication = getTrackedApplication(job);
 
     if (existingApplication) {
@@ -181,11 +181,15 @@ export default function JobSearch() {
     });
   }
 
-  function openApplicationTool(
+  async function openApplicationTool(
     job: JobSearchResult,
     pathname: "/resume-tailor" | "/cover-letter",
-  ): void {
-    const application = trackJob(job);
+  ): Promise<void> {
+    const application = await trackJob(job);
+
+    if (!application) {
+      return;
+    }
 
     router.push(
       `${pathname}?applicationId=${encodeURIComponent(

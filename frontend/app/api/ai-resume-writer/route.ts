@@ -9,6 +9,7 @@ import {
 } from "@/lib/access/feature-guard";
 import { releaseFeatureUsage } from "@/lib/access/feature-usage";
 import { buildAiResumePrompt } from "@/lib/ai-resume/prompt";
+import { safelyCreateNotification } from "@/lib/notifications/create-notification";
 import type {
   AiResumeSuggestion,
   AiResumeWriterErrorResponse,
@@ -237,6 +238,18 @@ export async function POST(request: Request) {
     const responseBody: AiResumeWriterResponse = {
       suggestions,
     };
+
+    await safelyCreateNotification({
+      userId: access.userId,
+      type: "resume_writer",
+      title: "Resume suggestions generated",
+      description:
+        "Your three AI-generated resume suggestions are ready to review.",
+      href: "/ai-resume",
+      metadata: {
+        suggestionCount: suggestions.length,
+      },
+    });
 
     operationSucceeded = true;
 

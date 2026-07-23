@@ -7,6 +7,8 @@ import {
   useState,
 } from "react";
 
+import { createClient } from "@/lib/supabase/client";
+
 import type {
   CreateJobApplicationInput,
   JobApplication,
@@ -15,82 +17,189 @@ import type {
   UpdateJobApplicationInput,
 } from "./types";
 
-const STORAGE_KEY = "panthrex-job-applications";
+type JobApplicationRow = {
+  id: string;
+  user_id: string;
+  company: string;
+  title: string;
+  location: string | null;
+  job_url: string | null;
+  salary: string | null;
+  description: string | null;
+  status: JobApplicationStatus;
+  priority: JobApplication["priority"];
+  applied_date: string | null;
+  interview_date: string | null;
+  recruiter: string | null;
+  recruiter_email: string | null;
+  resume_id: string | null;
+  cover_letter_id: string | null;
+  ats_analysis_id: string | null;
+  interview_session_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
-function createId(): string {
-  if (
-    typeof globalThis.crypto !== "undefined" &&
-    typeof globalThis.crypto.randomUUID === "function"
-  ) {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `job-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 10)}`;
+function mapRowToApplication(
+  row: JobApplicationRow,
+): JobApplication {
+  return {
+    id: row.id,
+    companyName: row.company,
+    jobTitle: row.title,
+    location: row.location ?? "",
+    jobUrl: row.job_url ?? "",
+    salary: row.salary ?? "",
+    jobDescription: row.description ?? "",
+    status: row.status,
+    priority: row.priority,
+    appliedDate: row.applied_date ?? "",
+    interviewDate: row.interview_date ?? "",
+    recruiterName: row.recruiter ?? "",
+    recruiterEmail: row.recruiter_email ?? "",
+    resumeId: row.resume_id ?? "",
+    coverLetterId: row.cover_letter_id ?? "",
+    atsAnalysisId: row.ats_analysis_id ?? "",
+    interviewSessionId: row.interview_session_id ?? "",
+    notes: row.notes ?? "",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
-function readStoredApplications(): JobApplication[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
+function emptyToNull(value: string | undefined): string | null {
+  const normalizedValue = value?.trim();
 
-  try {
-    const storedValue = window.localStorage.getItem(STORAGE_KEY);
-
-    if (!storedValue) {
-      return [];
-    }
-
-    const parsedValue: unknown = JSON.parse(storedValue);
-
-    if (!Array.isArray(parsedValue)) {
-      return [];
-    }
-
-    return parsedValue.filter(
-      (item): item is JobApplication =>
-        Boolean(
-          item &&
-            typeof item === "object" &&
-            "id" in item &&
-            "companyName" in item &&
-            "jobTitle" in item,
-        ),
-    );
-  } catch (error) {
-    console.error(
-      "Failed to read job applications from local storage:",
-      error,
-    );
-
-    return [];
-  }
+  return normalizedValue ? normalizedValue : null;
 }
 
-function saveStoredApplications(
-  applications: JobApplication[],
-): void {
-  if (typeof window === "undefined") {
-    return;
+function createInsertPayload(
+  input: CreateJobApplicationInput,
+  userId: string,
+) {
+  return {
+    user_id: userId,
+    company: input.companyName.trim(),
+    title: input.jobTitle.trim(),
+    location: emptyToNull(input.location),
+    job_url: emptyToNull(input.jobUrl),
+    salary: emptyToNull(input.salary),
+    description: emptyToNull(input.jobDescription),
+    status: input.status,
+    priority: input.priority,
+    applied_date: emptyToNull(input.appliedDate),
+    interview_date: emptyToNull(input.interviewDate),
+    recruiter: emptyToNull(input.recruiterName),
+    recruiter_email: emptyToNull(input.recruiterEmail),
+    resume_id: emptyToNull(input.resumeId),
+    cover_letter_id: emptyToNull(input.coverLetterId),
+    ats_analysis_id: emptyToNull(input.atsAnalysisId),
+    interview_session_id: emptyToNull(
+      input.interviewSessionId,
+    ),
+    notes: emptyToNull(input.notes),
+  };
+}
+
+function createUpdatePayload(
+  updates: UpdateJobApplicationInput,
+): Record<string, string | null> {
+  const payload: Record<string, string | null> = {};
+
+  if (updates.companyName !== undefined) {
+    payload.company = updates.companyName.trim();
   }
 
-  try {
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(applications),
-    );
-  } catch (error) {
-    console.error(
-      "Failed to save job applications to local storage:",
-      error,
+  if (updates.jobTitle !== undefined) {
+    payload.title = updates.jobTitle.trim();
+  }
+
+  if (updates.location !== undefined) {
+    payload.location = emptyToNull(updates.location);
+  }
+
+  if (updates.jobUrl !== undefined) {
+    payload.job_url = emptyToNull(updates.jobUrl);
+  }
+
+  if (updates.salary !== undefined) {
+    payload.salary = emptyToNull(updates.salary);
+  }
+
+  if (updates.jobDescription !== undefined) {
+    payload.description = emptyToNull(
+      updates.jobDescription,
     );
   }
+
+  if (updates.status !== undefined) {
+    payload.status = updates.status;
+  }
+
+  if (updates.priority !== undefined) {
+    payload.priority = updates.priority;
+  }
+
+  if (updates.appliedDate !== undefined) {
+    payload.applied_date = emptyToNull(
+      updates.appliedDate,
+    );
+  }
+
+  if (updates.interviewDate !== undefined) {
+    payload.interview_date = emptyToNull(
+      updates.interviewDate,
+    );
+  }
+
+  if (updates.recruiterName !== undefined) {
+    payload.recruiter = emptyToNull(
+      updates.recruiterName,
+    );
+  }
+
+  if (updates.recruiterEmail !== undefined) {
+    payload.recruiter_email = emptyToNull(
+      updates.recruiterEmail,
+    );
+  }
+
+  if (updates.resumeId !== undefined) {
+    payload.resume_id = emptyToNull(updates.resumeId);
+  }
+
+  if (updates.coverLetterId !== undefined) {
+    payload.cover_letter_id = emptyToNull(
+      updates.coverLetterId,
+    );
+  }
+
+  if (updates.atsAnalysisId !== undefined) {
+    payload.ats_analysis_id = emptyToNull(
+      updates.atsAnalysisId,
+    );
+  }
+
+  if (updates.interviewSessionId !== undefined) {
+    payload.interview_session_id = emptyToNull(
+      updates.interviewSessionId,
+    );
+  }
+
+  if (updates.notes !== undefined) {
+    payload.notes = emptyToNull(updates.notes);
+  }
+
+  return payload;
 }
 
 export function useJobTracker() {
-  const [applications, setApplications] =
-    useState<JobApplication[]>(readStoredApplications);
+  const supabase = useMemo(() => createClient(), []);
+
+  const [applications, setApplications] = useState<
+    JobApplication[]
+  >([]);
 
   const [selectedApplicationId, setSelectedApplicationId] =
     useState<string | null>(null);
@@ -101,24 +210,159 @@ export function useJobTracker() {
     JobApplicationStatus | "all"
   >("all");
 
-  const [isLoaded] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadApplications = useCallback(
+    async (authenticatedUserId: string) => {
+      setError(null);
+
+      const { data, error: queryError } = await supabase
+        .from("job_applications")
+        .select("*")
+        .eq("user_id", authenticatedUserId)
+        .order("created_at", { ascending: false });
+
+      if (queryError) {
+        console.error(
+          "Failed to load job applications:",
+          queryError,
+        );
+        setError(queryError.message);
+        setApplications([]);
+        return;
+      }
+
+      const loadedApplications = (
+        (data ?? []) as JobApplicationRow[]
+      ).map(mapRowToApplication);
+
+      setApplications(loadedApplications);
+
+      setSelectedApplicationId((currentId) => {
+        if (
+          currentId &&
+          loadedApplications.some(
+            (application) => application.id === currentId,
+          )
+        ) {
+          return currentId;
+        }
+
+        return loadedApplications[0]?.id ?? null;
+      });
+    },
+    [supabase],
+  );
 
   useEffect(() => {
-    saveStoredApplications(applications);
-  }, [applications]);
+    let isMounted = true;
+
+    async function initialiseTracker() {
+      setIsLoaded(false);
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (authError) {
+        console.error(
+          "Failed to read authenticated user:",
+          authError,
+        );
+        setError(authError.message);
+        setUserId(null);
+        setApplications([]);
+        setIsLoaded(true);
+        return;
+      }
+
+      if (!user) {
+        setUserId(null);
+        setApplications([]);
+        setSelectedApplicationId(null);
+        setIsLoaded(true);
+        return;
+      }
+
+      setUserId(user.id);
+      await loadApplications(user.id);
+
+      if (isMounted) {
+        setIsLoaded(true);
+      }
+    }
+
+    void initialiseTracker();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const authenticatedUserId =
+        session?.user.id ?? null;
+
+      setUserId(authenticatedUserId);
+      setError(null);
+
+      if (!authenticatedUserId) {
+        setApplications([]);
+        setSelectedApplicationId(null);
+        setIsLoaded(true);
+        return;
+      }
+
+      setIsLoaded(false);
+
+      void loadApplications(authenticatedUserId).finally(() => {
+        if (isMounted) {
+          setIsLoaded(true);
+        }
+      });
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [loadApplications, supabase]);
 
   const addApplication = useCallback(
-    (
+    async (
       input: CreateJobApplicationInput,
-    ): JobApplication => {
-      const now = new Date().toISOString();
+    ): Promise<JobApplication | null> => {
+      if (!userId) {
+        setError(
+          "You must be signed in to add a job application.",
+        );
+        return null;
+      }
 
-      const application: JobApplication = {
-        ...input,
-        id: createId(),
-        createdAt: now,
-        updatedAt: now,
-      };
+      setError(null);
+
+      const { data, error: insertError } = await supabase
+        .from("job_applications")
+        .insert(createInsertPayload(input, userId))
+        .select("*")
+        .single();
+
+      if (insertError) {
+        console.error(
+          "Failed to add job application:",
+          insertError,
+        );
+        setError(insertError.message);
+        return null;
+      }
+
+      const application = mapRowToApplication(
+        data as JobApplicationRow,
+      );
 
       setApplications((currentApplications) => [
         application,
@@ -129,51 +373,81 @@ export function useJobTracker() {
 
       return application;
     },
-    [],
+    [supabase, userId],
   );
 
   const updateApplication = useCallback(
-    (
+    async (
       applicationId: string,
       updates: UpdateJobApplicationInput,
-    ): void => {
+    ): Promise<void> => {
+      const payload = createUpdatePayload(updates);
+
+      if (Object.keys(payload).length === 0) {
+        return;
+      }
+
+      setError(null);
+
+      const { data, error: updateError } = await supabase
+        .from("job_applications")
+        .update(payload)
+        .eq("id", applicationId)
+        .select("*")
+        .single();
+
+      if (updateError) {
+        console.error(
+          "Failed to update job application:",
+          updateError,
+        );
+        setError(updateError.message);
+        return;
+      }
+
+      const updatedApplication = mapRowToApplication(
+        data as JobApplicationRow,
+      );
+
       setApplications((currentApplications) =>
         currentApplications.map((application) =>
           application.id === applicationId
-            ? {
-                ...application,
-                ...updates,
-                updatedAt: new Date().toISOString(),
-              }
+            ? updatedApplication
             : application,
         ),
       );
     },
-    [],
+    [supabase],
   );
 
   const updateApplicationStatus = useCallback(
-    (
+    async (
       applicationId: string,
       status: JobApplicationStatus,
-    ): void => {
-      setApplications((currentApplications) =>
-        currentApplications.map((application) =>
-          application.id === applicationId
-            ? {
-                ...application,
-                status,
-                updatedAt: new Date().toISOString(),
-              }
-            : application,
-        ),
-      );
+    ): Promise<void> => {
+      await updateApplication(applicationId, { status });
     },
-    [],
+    [updateApplication],
   );
 
   const deleteApplication = useCallback(
-    (applicationId: string): void => {
+    async (applicationId: string): Promise<void> => {
+      setError(null);
+
+      const { error: deleteError } = await supabase
+        .from("job_applications")
+        .delete()
+        .eq("id", applicationId);
+
+      if (deleteError) {
+        console.error(
+          "Failed to delete job application:",
+          deleteError,
+        );
+        setError(deleteError.message);
+        return;
+      }
+
       setApplications((currentApplications) =>
         currentApplications.filter(
           (application) =>
@@ -187,11 +461,13 @@ export function useJobTracker() {
           : currentSelectedId,
       );
     },
-    [],
+    [supabase],
   );
 
   const duplicateApplication = useCallback(
-    (applicationId: string): JobApplication | null => {
+    async (
+      applicationId: string,
+    ): Promise<JobApplication | null> => {
       const sourceApplication = applications.find(
         (application) => application.id === applicationId,
       );
@@ -200,32 +476,58 @@ export function useJobTracker() {
         return null;
       }
 
-      const now = new Date().toISOString();
-
-      const duplicatedApplication: JobApplication = {
-        ...sourceApplication,
-        id: createId(),
-        companyName: `${sourceApplication.companyName}`,
-        jobTitle: `${sourceApplication.jobTitle}`,
+      return addApplication({
+        companyName: sourceApplication.companyName,
+        jobTitle: sourceApplication.jobTitle,
+        location: sourceApplication.location,
+        jobUrl: sourceApplication.jobUrl,
+        salary: sourceApplication.salary,
+        jobDescription:
+          sourceApplication.jobDescription ?? "",
         status: "wishlist",
+        priority: sourceApplication.priority,
         appliedDate: "",
         interviewDate: "",
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      setApplications((currentApplications) => [
-        duplicatedApplication,
-        ...currentApplications,
-      ]);
-
-      setSelectedApplicationId(
-        duplicatedApplication.id,
-      );
-
-      return duplicatedApplication;
+        recruiterName: sourceApplication.recruiterName,
+        recruiterEmail: sourceApplication.recruiterEmail,
+        resumeId: sourceApplication.resumeId,
+        coverLetterId: sourceApplication.coverLetterId,
+        atsAnalysisId:
+          sourceApplication.atsAnalysisId ?? "",
+        interviewSessionId:
+          sourceApplication.interviewSessionId ?? "",
+        notes: sourceApplication.notes,
+      });
     },
-    [applications],
+    [addApplication, applications],
+  );
+
+  const clearAllApplications = useCallback(
+    async (): Promise<void> => {
+      if (!userId) {
+        return;
+      }
+
+      setError(null);
+
+      const { error: deleteError } = await supabase
+        .from("job_applications")
+        .delete()
+        .eq("user_id", userId);
+
+      if (deleteError) {
+        console.error(
+          "Failed to clear job applications:",
+          deleteError,
+        );
+        setError(deleteError.message);
+        return;
+      }
+
+      setApplications([]);
+      setSelectedApplicationId(null);
+    },
+    [supabase, userId],
   );
 
   const selectedApplication = useMemo(
@@ -288,11 +590,6 @@ export function useJobTracker() {
     );
   }, [applications]);
 
-  const clearAllApplications = useCallback((): void => {
-    setApplications([]);
-    setSelectedApplicationId(null);
-  }, []);
-
   return {
     applications,
     filteredApplications,
@@ -302,6 +599,7 @@ export function useJobTracker() {
     statusFilter,
     stats,
     isLoaded,
+    error,
     setSelectedApplicationId,
     setSearchQuery,
     setStatusFilter,

@@ -9,6 +9,7 @@ import {
 } from "@/lib/access/feature-guard";
 import { releaseFeatureUsage } from "@/lib/access/feature-usage";
 import { normalizeAtsScoreResult } from "@/lib/ats-score/normalize";
+import { safelyCreateNotification } from "@/lib/notifications/create-notification";
 import { buildAtsScorePrompt } from "@/lib/ats-score/prompt";
 import type {
   AtsScoreError,
@@ -291,6 +292,20 @@ export async function POST(
       normalizeAtsScoreResult(
         parsedResponse,
       );
+
+    await safelyCreateNotification({
+      userId: access.userId,
+      type: "ats_score",
+      title: "ATS analysis completed",
+      description:
+        "Your ATS resume analysis is ready. Review your score, keyword matches, and recommended improvements.",
+      href: "/ats-score",
+      metadata: {
+        resumeTitle:
+          normalizedRequest.resume.title ||
+          "Untitled resume",
+      },
+    });
 
     operationSucceeded = true;
 

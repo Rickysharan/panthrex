@@ -121,19 +121,13 @@ function getStatusClasses(
 export default function ResumeEnhancerPage() {
   const router = useRouter();
 
-  const [initialState] =
-    useState<InitialEnhancementState>(
-      loadInitialEnhancementState,
-    );
-
   const [enhancementData, setEnhancementData] =
-    useState<ResumeEnhancementResponse | null>(
-      initialState.enhancementData,
-    );
+    useState<ResumeEnhancementResponse | null>(null);
 
-  const [error, setError] = useState(
-    initialState.error,
-  );
+  const [error, setError] = useState("");
+
+  const [storageLoaded, setStorageLoaded] =
+    useState(false);
 
   const [copiedSuggestionId, setCopiedSuggestionId] =
     useState<string | null>(null);
@@ -142,7 +136,19 @@ export default function ResumeEnhancerPage() {
     useState(false);
 
   useEffect(() => {
-    if (!enhancementData) {
+    const initialState =
+      loadInitialEnhancementState();
+
+    setEnhancementData(
+      initialState.enhancementData,
+    );
+
+    setError(initialState.error);
+    setStorageLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!storageLoaded || !enhancementData) {
       return;
     }
 
@@ -150,7 +156,7 @@ export default function ResumeEnhancerPage() {
       ENHANCEMENTS_STORAGE_KEY,
       JSON.stringify(enhancementData),
     );
-  }, [enhancementData]);
+  }, [enhancementData, storageLoaded]);
 
   const suggestionCounts = useMemo(() => {
     if (!enhancementData) {

@@ -38,6 +38,46 @@ function isFuture(value: string | null): boolean {
   return new Date(value).getTime() > Date.now();
 }
 
+function isOwnerEmail(email: string | null | undefined): boolean {
+  if (!email) {
+    return false;
+  }
+
+  const ownerEmails =
+    process.env.PANTHREX_OWNER_EMAILS
+      ?.split(",")
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean) ?? [];
+
+  return ownerEmails.includes(email.trim().toLowerCase());
+}
+
+function createOwnerEntitlements(): Entitlements {
+  return {
+    tier: "premium",
+    premium: true,
+
+    welcomeTrial: {
+      active: false,
+      used: false,
+      startedAt: null,
+      endsAt: null,
+    },
+
+    dayPass: {
+      active: false,
+      expiresAt: null,
+    },
+
+    subscription: {
+      active: true,
+      expiresAt: null,
+    },
+
+    premiumUntil: null,
+  };
+}
+
 export async function getEntitlements(): Promise<Entitlements> {
   const supabase = await createClient();
 
@@ -69,6 +109,10 @@ export async function getEntitlements(): Promise<Entitlements> {
 
       premiumUntil: null,
     };
+  }
+
+  if (isOwnerEmail(user.email)) {
+    return createOwnerEntitlements();
   }
 
   const { data: profile } = await supabase

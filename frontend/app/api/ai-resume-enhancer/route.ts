@@ -10,6 +10,7 @@ import {
 import { releaseFeatureUsage } from "@/lib/access/feature-usage";
 import { normalizeResumeEnhancementResponse } from "@/lib/ai-resume-enhancer/normalize";
 import { buildResumeEnhancementPrompt } from "@/lib/ai-resume-enhancer/prompt";
+import { safelyCreateNotification } from "@/lib/notifications/create-notification";
 import type {
   ResumeEnhancementApiError,
   ResumeEnhancementRequest,
@@ -167,6 +168,21 @@ export async function POST(request: Request) {
         "No resume improvements were generated.",
       );
     }
+
+    await safelyCreateNotification({
+      userId: access.userId,
+      type: "resume_enhancement",
+      title: "Resume enhancement completed",
+      description:
+        "Your AI resume improvement suggestions are ready to review.",
+      href: "/resume-enhancer",
+      metadata: {
+        suggestionCount:
+          normalizedResponse.suggestions.length,
+        warningCount:
+          normalizedResponse.warnings.length,
+      },
+    });
 
     operationSucceeded = true;
 
