@@ -2,7 +2,7 @@ import type { ResumeData } from "@/lib/resume/types";
 
 export type AiParsedResumeData = Omit<
   ResumeData,
-  "title" | "template"
+  "title" | "template" | "sectionOrder"
 >;
 
 export type AiResumeParserRequest = {

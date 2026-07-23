@@ -12,13 +12,17 @@ import { createClient } from "@/lib/supabase/client";
 import type { AiParsedResumeData } from "@/lib/ai-resume-parser/types";
 import type { ResumeEnhancementSuggestion } from "@/lib/ai-resume-enhancer/types";
 
-import { defaultResumeData } from "./default-data";
+import {
+  DEFAULT_RESUME_SECTION_ORDER,
+  defaultResumeData,
+} from "./default-data";
 import type {
   Certification,
   Education,
   PersonalDetails,
   Project,
   ResumeData,
+  ResumeSectionId,
   ResumeTemplate,
   WorkExperience,
 } from "./types";
@@ -30,6 +34,20 @@ const VALID_TEMPLATES: ResumeTemplate[] = [
   "professional",
   "modern",
   "minimal",
+  "executive",
+  "technical",
+  "finance",
+  "academic",
+  "creative",
+];
+
+const VALID_SECTION_IDS: ResumeSectionId[] = [
+  "professional-summary",
+  "experience",
+  "education",
+  "skills",
+  "projects",
+  "certifications",
 ];
 
 type ResumeRow = {
@@ -51,6 +69,7 @@ type ResumeRow = {
   skills: unknown;
   projects: unknown;
   certifications: unknown;
+  section_order: unknown;
   created_at: string;
   updated_at: string;
 };
@@ -75,6 +94,7 @@ function cloneDefaultResumeData(): ResumeData {
     personalDetails: {
       ...defaultResumeData.personalDetails,
     },
+    sectionOrder: [...DEFAULT_RESUME_SECTION_ORDER],
     workExperience: [],
     education: [],
     skills: [],
@@ -90,6 +110,36 @@ function isResumeTemplate(
     typeof value === "string" &&
     VALID_TEMPLATES.includes(value as ResumeTemplate)
   );
+}
+
+function isResumeSectionId(
+  value: unknown,
+): value is ResumeSectionId {
+  return (
+    typeof value === "string" &&
+    VALID_SECTION_IDS.includes(value as ResumeSectionId)
+  );
+}
+
+function normalizeSectionOrder(
+  value: unknown,
+): ResumeSectionId[] {
+  if (!Array.isArray(value)) {
+    return [...DEFAULT_RESUME_SECTION_ORDER];
+  }
+
+  const uniqueSections = value.filter(
+    (section, index, sections): section is ResumeSectionId =>
+      isResumeSectionId(section) &&
+      sections.indexOf(section) === index,
+  );
+
+  const missingSections =
+    DEFAULT_RESUME_SECTION_ORDER.filter(
+      (section) => !uniqueSections.includes(section),
+    );
+
+  return [...uniqueSections, ...missingSections];
 }
 
 function isStoredResumeData(
@@ -122,6 +172,9 @@ function normalizeResumeData(
     template: isResumeTemplate(storedResume.template)
       ? storedResume.template
       : "professional",
+    sectionOrder: normalizeSectionOrder(
+      storedResume.sectionOrder,
+    ),
     personalDetails: {
       ...defaultResumeData.personalDetails,
       ...storedResume.personalDetails,
@@ -287,6 +340,9 @@ function resumeRowToResumeData(
     )
       ? row.certifications
       : [],
+    sectionOrder: normalizeSectionOrder(
+      row.section_order,
+    ),
   });
 }
 
@@ -298,6 +354,7 @@ function createResumePayload(
     user_id: userId,
     title: resumeData.title.trim() || "Untitled Resume",
     template: resumeData.template,
+    section_order: resumeData.sectionOrder,
     full_name:
       resumeData.personalDetails.fullName || null,
     email: resumeData.personalDetails.email || null,
@@ -583,6 +640,16 @@ export function useResumeBuilder() {
       setResumeData((currentResume) => ({
         ...currentResume,
         template,
+      }));
+    },
+    [],
+  );
+
+  const reorderSections = useCallback(
+    (sectionOrder: ResumeSectionId[]) => {
+      setResumeData((currentResume) => ({
+        ...currentResume,
+        sectionOrder: normalizeSectionOrder(sectionOrder),
       }));
     },
     [],
@@ -1131,6 +1198,7 @@ export function useResumeBuilder() {
       restoreResumeVersion,
       updateTitle,
       updateTemplate,
+      reorderSections,
       updatePersonalDetails,
       addWorkExperience,
       updateWorkExperience,
@@ -1157,6 +1225,7 @@ export function useResumeBuilder() {
       restoreResumeVersion,
       updateTitle,
       updateTemplate,
+      reorderSections,
       updatePersonalDetails,
       addWorkExperience,
       updateWorkExperience,

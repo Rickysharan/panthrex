@@ -1118,10 +1118,8 @@ function getTemplateStyles(
   switch (template) {
     case "modern":
       return {
-        document:
-          "rounded-2xl bg-white",
-        page:
-          "bg-white px-8 pb-10 pt-0 sm:px-10",
+        document: "rounded-2xl bg-white",
+        page: "bg-white px-8 pb-10 pt-0 sm:px-10",
         header:
           "-mx-8 bg-slate-900 px-8 py-9 text-white sm:-mx-10 sm:px-10",
         name:
@@ -1134,20 +1132,15 @@ function getTemplateStyles(
           "mt-5 text-xs text-white/40",
         links:
           "mt-1 break-all text-xs leading-5 text-white/60",
-        content:
-          "pt-1",
-        itemSpacing:
-          "space-y-6",
+        content: "pt-1",
+        itemSpacing: "space-y-6",
       };
 
     case "minimal":
       return {
-        document:
-          "rounded-none bg-white",
-        page:
-          "bg-white p-7 sm:p-8",
-        header:
-          "border-b border-black/25 pb-4",
+        document: "rounded-none bg-white",
+        page: "bg-white p-7 sm:p-8",
+        header: "border-b border-black/25 pb-4",
         name:
           "text-2xl font-semibold tracking-[-0.025em]",
         jobTitle:
@@ -1158,10 +1151,118 @@ function getTemplateStyles(
           "mt-3 text-[11px] text-black/35",
         links:
           "mt-1 break-all text-[11px] leading-5 text-black/55",
-        content:
-          "",
-        itemSpacing:
-          "space-y-4",
+        content: "",
+        itemSpacing: "space-y-4",
+      };
+
+    case "executive":
+      return {
+        document:
+          "rounded-2xl bg-[#f8f5ee] font-serif",
+        page:
+          "bg-[#f8f5ee] px-9 pb-11 pt-9 sm:px-12",
+        header:
+          "border-b-2 border-[#9a7b4f] pb-6 text-center",
+        name:
+          "text-4xl font-semibold tracking-[0.01em] text-[#241d16]",
+        jobTitle:
+          "mt-2 text-xs font-bold uppercase tracking-[0.24em] text-[#755f42]",
+        contact:
+          "mt-4 text-xs leading-5 text-black/60",
+        placeholderContact:
+          "mt-4 text-xs text-black/35",
+        links:
+          "mt-1 break-all text-xs leading-5 text-black/55",
+        content: "",
+        itemSpacing: "space-y-6",
+      };
+
+    case "technical":
+      return {
+        document:
+          "rounded-2xl bg-[#f7fafc]",
+        page:
+          "bg-[#f7fafc] p-8 sm:p-10",
+        header:
+          "border-l-[6px] border-[#2563eb] bg-[#eaf2ff] px-6 py-6",
+        name:
+          "font-mono text-3xl font-bold tracking-[-0.04em] text-[#111827]",
+        jobTitle:
+          "mt-2 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#2563eb]",
+        contact:
+          "mt-4 font-mono text-[11px] leading-5 text-black/60",
+        placeholderContact:
+          "mt-4 font-mono text-[11px] text-black/35",
+        links:
+          "mt-1 break-all font-mono text-[11px] leading-5 text-black/55",
+        content: "",
+        itemSpacing: "space-y-5",
+      };
+
+    case "finance":
+      return {
+        document:
+          "rounded-2xl bg-white",
+        page:
+          "bg-white px-9 pb-11 pt-0 sm:px-11",
+        header:
+          "-mx-9 bg-[#10233f] px-9 py-8 text-white sm:-mx-11 sm:px-11",
+        name:
+          "text-3xl font-bold tracking-[-0.025em]",
+        jobTitle:
+          "mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#c6d6ec]",
+        contact:
+          "mt-4 text-xs leading-5 text-white/70",
+        placeholderContact:
+          "mt-4 text-xs text-white/40",
+        links:
+          "mt-1 break-all text-xs leading-5 text-white/60",
+        content: "pt-1",
+        itemSpacing: "space-y-5",
+      };
+
+    case "academic":
+      return {
+        document:
+          "rounded-none bg-white font-serif",
+        page:
+          "bg-white px-8 py-8 sm:px-10",
+        header:
+          "border-b border-black pb-5 text-center",
+        name:
+          "text-3xl font-bold tracking-normal",
+        jobTitle:
+          "mt-1.5 text-sm font-medium text-black/65",
+        contact:
+          "mt-3 text-[11px] leading-5 text-black/65",
+        placeholderContact:
+          "mt-3 text-[11px] text-black/35",
+        links:
+          "mt-1 break-all text-[11px] leading-5 text-black/55",
+        content: "",
+        itemSpacing: "space-y-4",
+      };
+
+    case "creative":
+      return {
+        document:
+          "rounded-2xl bg-[#fffaf7]",
+        page:
+          "bg-[#fffaf7] px-8 pb-10 pt-0 sm:px-10",
+        header:
+          "-mx-8 bg-gradient-to-br from-[#4c1d95] to-[#7c3aed] px-8 py-9 text-white sm:-mx-10 sm:px-10",
+        name:
+          "text-4xl font-black tracking-[-0.045em]",
+        jobTitle:
+          "mt-2 text-sm font-bold uppercase tracking-[0.17em] text-white/75",
+        contact:
+          "mt-5 text-xs leading-5 text-white/75",
+        placeholderContact:
+          "mt-5 text-xs text-white/40",
+        links:
+          "mt-1 break-all text-xs leading-5 text-white/65",
+        content: "pt-1",
+        itemSpacing: "space-y-6",
       };
 
     case "professional":
@@ -1183,10 +1284,8 @@ function getTemplateStyles(
           "mt-4 text-xs text-black/35",
         links:
           "mt-1 break-all text-xs leading-5 text-black/55",
-        content:
-          "",
-        itemSpacing:
-          "space-y-6",
+        content: "",
+        itemSpacing: "space-y-6",
       };
   }
 }
@@ -1200,6 +1299,21 @@ function getTemplateDescription(
 
     case "minimal":
       return "Compact layout focused on essential content";
+
+    case "executive":
+      return "Refined layout for leadership and senior roles";
+
+    case "technical":
+      return "Structured layout for software and engineering roles";
+
+    case "finance":
+      return "Conservative layout for finance and consulting";
+
+    case "academic":
+      return "Content-dense layout for research and education";
+
+    case "creative":
+      return "Distinctive layout with stronger personal branding";
 
     case "professional":
     default:

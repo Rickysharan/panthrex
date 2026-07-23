@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronDown, CircleUserRound, LoaderCircle } from "lucide-react";
+import {
+  ChevronDown,
+  CircleUserRound,
+  LoaderCircle,
+  Settings,
+  UserRound,
+} from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import LogoutButton from "@/components/auth/LogoutButton";
@@ -31,7 +38,8 @@ function buildUserProfile(
   const emailName = email ? email.split("@")[0] : "";
   const fullName = metadataName || emailName || fallbackProfile.fullName;
   const firstName = fullName.split(/\s+/)[0] || fallbackProfile.firstName;
-  const initial = fullName.charAt(0).toUpperCase() || fallbackProfile.initial;
+  const initial =
+    fullName.charAt(0).toUpperCase() || fallbackProfile.initial;
 
   return {
     fullName,
@@ -50,7 +58,8 @@ export default function UserProfileMenu({
 }: UserProfileMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const [profile, setProfile] = useState<UserProfile>(fallbackProfile);
+  const [profile, setProfile] =
+    useState<UserProfile>(fallbackProfile);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -191,7 +200,29 @@ export default function UserProfileMenu({
             </div>
           </div>
 
-          <div className="mt-3">
+          <div className="mt-3 space-y-1">
+            <Link
+              href="/profile"
+              role="menuitem"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-white/65 transition hover:bg-white/[0.06] hover:text-white"
+            >
+              <UserRound size={18} />
+              View profile
+            </Link>
+
+            <Link
+              href="/settings"
+              role="menuitem"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-white/65 transition hover:bg-white/[0.06] hover:text-white"
+            >
+              <Settings size={18} />
+              Settings
+            </Link>
+          </div>
+
+          <div className="mt-3 border-t border-white/10 pt-3">
             <LogoutButton onSignedOut={() => setIsOpen(false)} />
           </div>
         </div>

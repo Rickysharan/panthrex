@@ -1,11 +1,11 @@
 "use client";
+import UserProfileMenu from "@/components/auth/UserProfileMenu";
 
 import {
   ArrowUpRight,
   Bell,
   BriefcaseBusiness,
   CalendarDays,
-  ChevronDown,
   CircleUserRound,
   Clock3,
   FileCheck2,
@@ -143,9 +143,8 @@ export default function DashboardPage() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/10 bg-[#070a18]/95 p-5 backdrop-blur-2xl transition-transform duration-300 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/10 bg-[#070a18]/95 p-5 backdrop-blur-2xl transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
@@ -178,11 +177,10 @@ export default function DashboardPage() {
                 key={item.label}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium transition ${
-                  item.active
-                    ? "bg-white text-[#050816]"
-                    : "text-white/55 hover:bg-white/[0.055] hover:text-white"
-                }`}
+                className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-medium transition ${item.active
+                  ? "bg-white text-[#050816]"
+                  : "text-white/55 hover:bg-white/[0.055] hover:text-white"
+                  }`}
               >
                 <Icon size={19} />
                 {item.label}
@@ -248,21 +246,7 @@ export default function DashboardPage() {
                 <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-violet-400" />
               </button>
 
-              <button
-                type="button"
-                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 transition hover:bg-white/[0.07]"
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-violet-400 to-blue-400 font-semibold text-white">
-                  R
-                </span>
-
-                <div className="hidden text-left sm:block">
-                  <p className="text-sm font-medium">Ricky Sharan</p>
-                  <p className="text-xs text-white/35">Free plan</p>
-                </div>
-
-                <ChevronDown size={16} className="text-white/35" />
-              </button>
+              <UserProfileMenu />
             </div>
           </div>
         </header>
@@ -620,18 +604,16 @@ function ChartBar({
       <div className="flex flex-1 items-end">
         <div
           style={{ height: `${value}%` }}
-          className={`w-full rounded-t-xl transition ${
-            highlighted
-              ? "bg-gradient-to-t from-violet-500 to-blue-300"
-              : "bg-white/[0.08]"
-          }`}
+          className={`w-full rounded-t-xl transition ${highlighted
+            ? "bg-gradient-to-t from-violet-500 to-blue-300"
+            : "bg-white/[0.08]"
+            }`}
         />
       </div>
 
       <p
-        className={`mt-3 text-center text-xs ${
-          highlighted ? "font-semibold text-white" : "text-white/30"
-        }`}
+        className={`mt-3 text-center text-xs ${highlighted ? "font-semibold text-white" : "text-white/30"
+          }`}
       >
         {label}
       </p>

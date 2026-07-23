@@ -1,11 +1,15 @@
 import { createClient } from "@/lib/supabase/client";
 
-import { defaultResumeData } from "./default-data";
+import {
+  DEFAULT_RESUME_SECTION_ORDER,
+  defaultResumeData,
+} from "./default-data";
 import type {
   Certification,
   Education,
   Project,
   ResumeData,
+  ResumeSectionId,
   ResumeTemplate,
   WorkExperience,
 } from "./types";
@@ -44,6 +48,7 @@ type ResumeDatabaseRow = {
   skills: unknown;
   projects: unknown;
   certifications: unknown;
+  section_order: unknown;
   is_default: boolean | null;
   created_at: string;
   updated_at: string;
@@ -53,6 +58,20 @@ const VALID_TEMPLATES: ResumeTemplate[] = [
   "professional",
   "modern",
   "minimal",
+  "executive",
+  "technical",
+  "finance",
+  "academic",
+  "creative",
+];
+
+const VALID_SECTION_IDS: ResumeSectionId[] = [
+  "professional-summary",
+  "experience",
+  "education",
+  "skills",
+  "projects",
+  "certifications",
 ];
 
 function isRecord(
@@ -68,6 +87,36 @@ function isResumeTemplate(
     typeof value === "string" &&
     VALID_TEMPLATES.includes(value as ResumeTemplate)
   );
+}
+
+function isResumeSectionId(
+  value: unknown,
+): value is ResumeSectionId {
+  return (
+    typeof value === "string" &&
+    VALID_SECTION_IDS.includes(value as ResumeSectionId)
+  );
+}
+
+function normalizeSectionOrder(
+  value: unknown,
+): ResumeSectionId[] {
+  if (!Array.isArray(value)) {
+    return [...DEFAULT_RESUME_SECTION_ORDER];
+  }
+
+  const uniqueSections = value.filter(
+    (section, index, sections): section is ResumeSectionId =>
+      isResumeSectionId(section) &&
+      sections.indexOf(section) === index,
+  );
+
+  const missingSections =
+    DEFAULT_RESUME_SECTION_ORDER.filter(
+      (section) => !uniqueSections.includes(section),
+    );
+
+  return [...uniqueSections, ...missingSections];
 }
 
 function isWorkExperienceArray(
@@ -137,6 +186,7 @@ function cloneDefaultResumeData(
   return {
     ...defaultResumeData,
     title,
+    sectionOrder: [...DEFAULT_RESUME_SECTION_ORDER],
     personalDetails: {
       ...defaultResumeData.personalDetails,
     },
@@ -160,6 +210,9 @@ function rowToResumeData(
     template: isResumeTemplate(row.template)
       ? row.template
       : "professional",
+    sectionOrder: normalizeSectionOrder(
+      row.section_order,
+    ),
     personalDetails: {
       ...defaultResumeData.personalDetails,
       fullName: row.full_name ?? "",
@@ -220,6 +273,7 @@ function createDatabasePayload(
     user_id: userId,
     title: normalizeTitle(resumeData.title),
     template: resumeData.template,
+    section_order: resumeData.sectionOrder,
     full_name:
       resumeData.personalDetails.fullName || null,
     email: resumeData.personalDetails.email || null,
@@ -298,6 +352,7 @@ export async function getResumes(): Promise<
         "skills",
         "projects",
         "certifications",
+        "section_order",
         "is_default",
         "created_at",
         "updated_at",
@@ -439,6 +494,9 @@ export async function duplicateResume(
   const duplicateData: ResumeData = {
     ...originalResume.resumeData,
     title: duplicateTitle,
+    sectionOrder: [
+      ...originalResume.resumeData.sectionOrder,
+    ],
     personalDetails: {
       ...originalResume.resumeData.personalDetails,
     },

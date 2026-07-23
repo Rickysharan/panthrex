@@ -31,13 +31,43 @@ const templateOptions: TemplateOption[] = [
     id: "modern",
     name: "Modern",
     description:
-      "Contemporary layout with stronger typography and visual hierarchy.",
+      "Contemporary layout with strong typography and visual hierarchy.",
   },
   {
     id: "minimal",
     name: "Minimal",
     description:
       "Clean, compact design focused entirely on resume content.",
+  },
+  {
+    id: "executive",
+    name: "Executive",
+    description:
+      "Refined leadership-focused layout for senior and management roles.",
+  },
+  {
+    id: "technical",
+    name: "Technical",
+    description:
+      "Structured layout designed for software, data and engineering roles.",
+  },
+  {
+    id: "finance",
+    name: "Finance",
+    description:
+      "Conservative professional design for banking, consulting and finance.",
+  },
+  {
+    id: "academic",
+    name: "Academic",
+    description:
+      "Content-dense format for research, education and graduate applications.",
+  },
+  {
+    id: "creative",
+    name: "Creative",
+    description:
+      "Distinctive presentation with a stronger personal brand and hierarchy.",
   },
 ];
 

@@ -1,7 +1,20 @@
 export type ResumeTemplate =
   | "professional"
   | "modern"
-  | "minimal";
+  | "minimal"
+  | "executive"
+  | "technical"
+  | "finance"
+  | "academic"
+  | "creative";
+export type ResumeSectionId =
+  | "professional-summary"
+  | "experience"
+  | "education"
+  | "skills"
+  | "projects"
+  | "certifications";
+
 
 export type PersonalDetails = {
   fullName: string;
@@ -59,6 +72,7 @@ export type Certification = {
 export type ResumeData = {
   title: string;
   template: ResumeTemplate;
+  sectionOrder: ResumeSectionId[];
   personalDetails: PersonalDetails;
   workExperience: WorkExperience[];
   education: Education[];
