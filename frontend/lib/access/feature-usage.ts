@@ -12,7 +12,8 @@ export type FeatureKey =
   | "interview_prep"
   | "interview_generate"
   | "interview_evaluate"
-  | "job_matching";
+  | "job_matching"
+  | "career_assistant";
 
 export type UsagePeriod = "daily" | "monthly" | "lifetime";
 

@@ -18,6 +18,7 @@ export type JobApplication = {
   location: string;
   jobUrl: string;
   salary: string;
+  jobDescription?: string;
   status: JobApplicationStatus;
   priority: JobApplicationPriority;
   appliedDate: string;
@@ -26,6 +27,10 @@ export type JobApplication = {
   recruiterEmail: string;
   resumeId: string;
   coverLetterId: string;
+
+  atsAnalysisId?: string;
+  interviewSessionId?: string;
+
   notes: string;
   createdAt: string;
   updatedAt: string;

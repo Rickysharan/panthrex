@@ -1,13 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 
 import { useResumeBuilder } from "@/lib/resume/useResumeBuilder";
 import { useResumeTailor } from "@/lib/resume-tailor/useResumeTailor";
+import { useJobTracker } from "@/lib/job-tracker/useJobTracker";
 
 export default function ResumeTailor() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const applicationId =
+    searchParams.get("applicationId");
+
+  const { applications, updateApplication } =
+    useJobTracker();
+
+  const linkedApplication =
+    applications.find(
+      (application) =>
+        application.id === applicationId,
+    ) ?? null;
 
   const {
     resumeData,
@@ -33,6 +50,28 @@ export default function ResumeTailor() {
   const [hasAppliedResume, setHasAppliedResume] =
     useState(false);
 
+  const [hasInitialisedApplication, setHasInitialisedApplication] =
+    useState(false);
+
+  useEffect(() => {
+    if (
+      hasInitialisedApplication ||
+      !linkedApplication
+    ) {
+      return;
+    }
+
+    setTargetRole(linkedApplication.jobTitle);
+    setCompany(linkedApplication.companyName);
+    setJobDescription(
+      linkedApplication.jobDescription ?? "",
+    );
+    setHasInitialisedApplication(true);
+  }, [
+    hasInitialisedApplication,
+    linkedApplication,
+  ]);
+
   async function handleSubmit() {
     const normalizedTargetRole = targetRole.trim();
     const normalizedCompany = company.trim();
@@ -49,12 +88,19 @@ export default function ResumeTailor() {
 
     setHasAppliedResume(false);
 
-    await tailorResume({
+    const session = await tailorResume({
       targetRole: normalizedTargetRole,
       company: normalizedCompany,
       jobDescription: normalizedJobDescription,
       resume: resumeData,
     });
+
+    if (session && applicationId) {
+      updateApplication(applicationId, {
+        resumeId: session.id,
+        jobDescription: normalizedJobDescription,
+      });
+    }
   }
 
   function handleApplyTailoredResume() {
@@ -167,6 +213,26 @@ export default function ResumeTailor() {
           optimisation.
         </p>
       </div>
+
+      {linkedApplication && (
+        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4">
+          <p className="font-semibold text-indigo-300">
+            Linked to tracked application
+          </p>
+
+          <p className="mt-1 text-sm text-indigo-200/80">
+            {linkedApplication.jobTitle} at{" "}
+            {linkedApplication.companyName}
+          </p>
+        </div>
+      )}
+
+      {applicationId && !linkedApplication && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200">
+          The linked job application could not be found. You
+          can still use Resume Tailor as a standalone tool.
+        </div>
+      )}
 
       {error && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-300">

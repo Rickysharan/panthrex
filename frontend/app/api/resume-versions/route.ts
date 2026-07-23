@@ -201,3 +201,71 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.json(
+      { error: "Unauthorized." },
+      { status: 401 },
+    );
+  }
+
+  const versionId = request.nextUrl.searchParams
+    .get("id")
+    ?.trim();
+
+  if (!versionId) {
+    return NextResponse.json(
+      { error: "A version ID is required." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const { data: version, error: versionError } =
+      await supabase
+        .from("resume_versions")
+        .select("id")
+        .eq("id", versionId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+    if (versionError) {
+      throw versionError;
+    }
+
+    if (!version) {
+      return NextResponse.json(
+        { error: "Resume version not found." },
+        { status: 404 },
+      );
+    }
+
+    const { error: deleteError } = await supabase
+      .from("resume_versions")
+      .delete()
+      .eq("id", versionId)
+      .eq("user_id", user.id);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    return NextResponse.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error("Unable to delete resume version.", error);
+
+    return NextResponse.json(
+      { error: "Unable to delete resume version." },
+      { status: 500 },
+    );
+  }
+}

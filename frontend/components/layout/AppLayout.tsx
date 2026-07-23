@@ -1,6 +1,7 @@
 "use client";
 
 import UserProfileMenu from "@/components/auth/UserProfileMenu";
+import CareerAssistant from "@/components/career-assistant/CareerAssistant";
 import {
   Bell,
   BriefcaseBusiness,
@@ -520,6 +521,8 @@ export default function AppLayout({
           {children}
         </main>
       </div>
+
+      <CareerAssistant />
     </div>
   );
 }
@@ -619,12 +622,12 @@ function SidebarContent({
             and interview preparation.
           </p>
 
-          <button
-            type="button"
-            className="mt-3 w-full rounded-xl bg-indigo-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-indigo-400"
+          <Link
+            href="/settings"
+            className="mt-3 block w-full rounded-xl bg-indigo-500 px-3 py-2 text-center text-xs font-semibold text-white transition hover:bg-indigo-400"
           >
             Upgrade plan
-          </button>
+          </Link>
         </div>
 
         <Link

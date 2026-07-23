@@ -1,14 +1,25 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 
 import { useJobSearch } from "@/lib/job-search/useJobSearch";
+import { useJobTracker } from "@/lib/job-tracker/useJobTracker";
 import type {
   JobEmploymentType,
   JobExperienceLevel,
   JobSearchResult,
   JobWorkplaceType,
 } from "@/lib/job-search/types";
+
+function createTrackedJobKey(
+  companyName: string,
+  jobTitle: string,
+): string {
+  return `${companyName.trim().toLowerCase()}|${jobTitle
+    .trim()
+    .toLowerCase()}`;
+}
 
 function formatSalary(job: JobSearchResult) {
   if (!job.salary) {
@@ -78,6 +89,8 @@ function getSponsorshipLabel(
 }
 
 export default function JobSearch() {
+  const router = useRouter();
+
   const {
     jobs,
     savedJobs,
@@ -98,6 +111,8 @@ export default function JobSearch() {
     goToPreviousPage,
   } = useJobSearch();
 
+  const { applications, addApplication } = useJobTracker();
+
   const savedJobIds = useMemo(
     () =>
       new Set(
@@ -105,6 +120,79 @@ export default function JobSearch() {
       ),
     [savedJobs],
   );
+
+  const trackedApplicationsByKey = useMemo(
+    () =>
+      new Map(
+        applications.map((application) => [
+          createTrackedJobKey(
+            application.companyName,
+            application.jobTitle,
+          ),
+          application,
+        ]),
+      ),
+    [applications],
+  );
+
+  function getTrackedApplication(job: JobSearchResult) {
+    return (
+      trackedApplicationsByKey.get(
+        createTrackedJobKey(job.company, job.title),
+      ) ?? null
+    );
+  }
+
+  function isTracked(job: JobSearchResult): boolean {
+    return getTrackedApplication(job) !== null;
+  }
+
+  function trackJob(job: JobSearchResult) {
+    const existingApplication = getTrackedApplication(job);
+
+    if (existingApplication) {
+      return existingApplication;
+    }
+
+    return addApplication({
+      companyName: job.company,
+      jobTitle: job.title,
+      location: job.location,
+      jobUrl: job.applicationUrl,
+      salary: formatSalary(job),
+      jobDescription: job.description,
+      status: "wishlist",
+      priority: "medium",
+      appliedDate: "",
+      interviewDate: "",
+      recruiterName: "",
+      recruiterEmail: "",
+      resumeId: "",
+      coverLetterId: "",
+      notes: [
+        "Imported from Panthrex Job Search.",
+        `Source: ${job.sourceLabel}.`,
+        job.externalId
+          ? `External job ID: ${job.externalId}.`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
+  }
+
+  function openApplicationTool(
+    job: JobSearchResult,
+    pathname: "/resume-tailor" | "/cover-letter",
+  ): void {
+    const application = trackJob(job);
+
+    router.push(
+      `${pathname}?applicationId=${encodeURIComponent(
+        application.id,
+      )}`,
+    );
+  }
 
   function toggleArrayFilter<T extends string>(
     currentValues: T[],
@@ -502,9 +590,25 @@ export default function JobSearch() {
             <JobDetails
               job={selectedJob}
               saved={isJobSaved(selectedJob.id)}
+              tracked={isTracked(selectedJob)}
               onSave={() => saveJob(selectedJob)}
               onUnsave={() =>
                 unsaveJob(selectedJob.id)
+              }
+              onTrack={() => {
+                trackJob(selectedJob);
+              }}
+              onTailorResume={() =>
+                openApplicationTool(
+                  selectedJob,
+                  "/resume-tailor",
+                )
+              }
+              onGenerateCoverLetter={() =>
+                openApplicationTool(
+                  selectedJob,
+                  "/cover-letter",
+                )
               }
             />
           )}
@@ -596,13 +700,21 @@ function EmptyState({
 function JobDetails({
   job,
   saved,
+  tracked,
   onSave,
   onUnsave,
+  onTrack,
+  onTailorResume,
+  onGenerateCoverLetter,
 }: {
   job: JobSearchResult;
   saved: boolean;
+  tracked: boolean;
   onSave: () => void;
   onUnsave: () => void;
+  onTrack: () => void;
+  onTailorResume: () => void;
+  onGenerateCoverLetter: () => void;
 }) {
   return (
     <article className="rounded-2xl border border-slate-800 bg-slate-900 p-6 lg:p-8">
@@ -718,6 +830,15 @@ function JobDetails({
           {saved ? "Remove Saved Job" : "Save Job"}
         </button>
 
+        <button
+          type="button"
+          onClick={onTrack}
+          disabled={tracked}
+          className="rounded-xl bg-amber-600 px-4 py-3 font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:bg-emerald-700 disabled:hover:bg-emerald-700"
+        >
+          {tracked ? "✓ Tracked" : "Track Application"}
+        </button>
+
         <a
           href={job.applicationUrl}
           target="_blank"
@@ -727,23 +848,21 @@ function JobDetails({
           Apply on Company Site
         </a>
 
-        <a
-          href={`/resume-tailor?jobId=${encodeURIComponent(
-            job.id,
-          )}`}
+        <button
+          type="button"
+          onClick={onTailorResume}
           className="rounded-xl bg-emerald-600 px-4 py-3 text-center font-semibold text-white transition hover:bg-emerald-500"
         >
           Tailor Resume
-        </a>
+        </button>
 
-        <a
-          href={`/cover-letter?jobId=${encodeURIComponent(
-            job.id,
-          )}`}
+        <button
+          type="button"
+          onClick={onGenerateCoverLetter}
           className="rounded-xl bg-slate-700 px-4 py-3 text-center font-semibold text-white transition hover:bg-slate-600"
         >
           Generate Cover Letter
-        </a>
+        </button>
       </div>
     </article>
   );

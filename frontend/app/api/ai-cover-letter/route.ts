@@ -1,332 +1,116 @@
+import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
 
-import {
-  AuthenticationError,
-  FeatureLimitError,
-  FeatureUsageError,
-  requireFeatureAccess,
-} from "@/lib/access/feature-guard";
-import { releaseFeatureUsage } from "@/lib/access/feature-usage";
+import { buildCoverLetterPrompt } from "@/lib/ai-cover-letter/prompt";
+import { normalizeCoverLetterResponse } from "@/lib/ai-cover-letter/normalize";
+import type {
+  CoverLetterApiError,
+  CoverLetterRequest,
+} from "@/lib/ai-cover-letter/types";
 
 export const runtime = "nodejs";
 
-const MODEL = "gpt-4.1-mini";
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-const FEATURE_KEY = "cover_letter" as const;
-const FREE_MONTHLY_LIMIT = 3;
-const PREMIUM_MONTHLY_LIMIT = 100;
-
-type CoverLetterRequest = {
-  companyName?: unknown;
-  jobTitle?: unknown;
-  jobDescription?: unknown;
-  applicantName?: unknown;
-  skills?: unknown;
-  experience?: unknown;
-  tone?: unknown;
-};
-
-type CoverLetterSuccessResponse = {
-  success: true;
-  coverLetter: string;
-};
-
-type CoverLetterErrorResponse = {
-  success: false;
-  error: string;
-  details?: string;
-};
-
-function normalizeOptionalText(
+function isValidRequest(
   value: unknown,
-  maxLength: number,
-): string {
-  if (typeof value !== "string") {
-    return "";
+): value is CoverLetterRequest {
+  if (!value || typeof value !== "object") {
+    return false;
   }
 
-  return value.trim().slice(0, maxLength);
+  const request = value as Partial<CoverLetterRequest>;
+
+  return Boolean(
+    request.resume &&
+      typeof request.companyName === "string" &&
+      request.companyName.trim() &&
+      typeof request.jobTitle === "string" &&
+      request.jobTitle.trim() &&
+      typeof request.jobDescription === "string" &&
+      request.jobDescription.trim() &&
+      typeof request.tone === "string" &&
+      typeof request.length === "string",
+  );
 }
 
-function jsonError(
-  error: string,
-  status: number,
-  details?: string,
-  headers?: HeadersInit,
-) {
-  const response: CoverLetterErrorResponse = {
-    success: false,
-    error,
-    ...(details ? { details } : {}),
-  };
-
-  return NextResponse.json(response, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      ...headers,
-    },
-  });
-}
-
-async function safelyReleaseUsage(): Promise<void> {
+export async function POST(request: Request) {
   try {
-    await releaseFeatureUsage(
-      FEATURE_KEY,
-      "monthly",
-    );
-  } catch (error) {
-    console.error(
-      "Unable to restore Cover Letter quota.",
-      error,
-    );
-  }
-}
-
-export async function POST(
-  request: NextRequest,
-) {
-  let body: CoverLetterRequest;
-
-  try {
-    body =
-      (await request.json()) as CoverLetterRequest;
-  } catch {
-    return jsonError(
-      "The request body must contain valid JSON.",
-      400,
-    );
-  }
-
-  const companyName = normalizeOptionalText(
-    body.companyName,
-    200,
-  );
-  const jobTitle = normalizeOptionalText(
-    body.jobTitle,
-    200,
-  );
-  const jobDescription = normalizeOptionalText(
-    body.jobDescription,
-    20_000,
-  );
-  const applicantName = normalizeOptionalText(
-    body.applicantName,
-    200,
-  );
-  const skills = normalizeOptionalText(
-    body.skills,
-    5_000,
-  );
-  const experience = normalizeOptionalText(
-    body.experience,
-    10_000,
-  );
-  const tone =
-    normalizeOptionalText(body.tone, 100) ||
-    "professional";
-
-  if (!companyName || !jobTitle) {
-    return jsonError(
-      "Company name and job title are required.",
-      400,
-    );
-  }
-
-  const apiKey = process.env.OPENAI_API_KEY;
-
-  if (!apiKey) {
-    return jsonError(
-      "Cover Letter Generator is not configured.",
-      503,
-      "The server is missing the OPENAI_API_KEY environment variable.",
-    );
-  }
-
-  let quotaConsumed = false;
-  let operationSucceeded = false;
-  let usageLimit = FREE_MONTHLY_LIMIT;
-  let usageRemaining = 0;
-
-  try {
-    const access = await requireFeatureAccess({
-      featureKey: FEATURE_KEY,
-      freeLimit: FREE_MONTHLY_LIMIT,
-      premiumLimit: PREMIUM_MONTHLY_LIMIT,
-      periodType: "monthly",
-    });
-
-    quotaConsumed = true;
-    usageLimit = access.limit;
-    usageRemaining = access.usage.remaining;
-
-    const prompt = `
-You are an expert career coach and ATS resume specialist.
-
-Write a professional cover letter.
-
-Applicant:
-${applicantName}
-
-Company:
-${companyName}
-
-Role:
-${jobTitle}
-
-Skills:
-${skills}
-
-Experience:
-${experience}
-
-Job Description:
-${jobDescription}
-
-Tone:
-${tone}
-
-Requirements:
-- Professional and personalised
-- Mention the company naturally
-- Show clear enthusiasm
-- Highlight relevant experience
-- Mention relevant technical skills
-- Keep the letter around 350 to 450 words
-- Do not use placeholders
-- Do not use bullet points
-- End with a confident closing
-`.trim();
-
-    const client = new OpenAI({
-      apiKey,
-      timeout: 45_000,
-      maxRetries: 2,
-    });
-
-    const response =
-      await client.chat.completions.create({
-        model: MODEL,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an expert cover letter writer.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-      });
-
-    const coverLetter =
-      response.choices[0]?.message?.content?.trim();
-
-    if (!coverLetter) {
-      return jsonError(
-        "The AI did not return a cover letter.",
-        502,
-      );
-    }
-
-    const responseBody: CoverLetterSuccessResponse = {
-      success: true,
-      coverLetter,
-    };
-
-    operationSucceeded = true;
-
-    return NextResponse.json(responseBody, {
-      status: 200,
-      headers: {
-        "Cache-Control": "no-store",
-        "X-RateLimit-Limit": String(usageLimit),
-        "X-RateLimit-Remaining": String(
-          usageRemaining,
-        ),
-      },
-    });
-  } catch (error) {
-    console.error(
-      "Cover Letter request failed.",
-      error,
-    );
-
-    if (error instanceof AuthenticationError) {
-      return jsonError(
-        "Authentication required.",
-        401,
-        "Please sign in before generating a cover letter.",
-      );
-    }
-
-    if (error instanceof FeatureLimitError) {
-      return jsonError(
-        "Cover Letter monthly limit reached.",
-        429,
-        "Upgrade your plan or wait until your monthly allowance resets.",
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json<CoverLetterApiError>(
         {
-          "X-RateLimit-Limit": String(
-            error.limit,
-          ),
-          "X-RateLimit-Remaining": "0",
-          "X-RateLimit-Reset":
-            error.periodEnd,
+          error:
+            "OPENAI_API_KEY is not configured in the server environment.",
+        },
+        {
+          status: 500,
         },
       );
     }
 
-    if (error instanceof FeatureUsageError) {
-      return jsonError(
-        "Unable to verify your feature allowance.",
-        503,
-        "Please try again shortly.",
+    const body: unknown = await request.json();
+
+    if (!isValidRequest(body)) {
+      return NextResponse.json<CoverLetterApiError>(
+        {
+          error:
+            "Invalid cover letter request. Company name, job title, job description, tone, length and resume data are required.",
+        },
+        {
+          status: 400,
+        },
       );
     }
 
-    if (error instanceof OpenAI.APIError) {
-      if (error.status === 401) {
-        return jsonError(
-          "The AI service rejected the configured API key.",
-          503,
-        );
-      }
+    const prompt = buildCoverLetterPrompt(body);
 
-      if (error.status === 429) {
-        return jsonError(
-          "The AI service is temporarily rate limited.",
-          429,
-          "Please try again shortly.",
-        );
-      }
+    const completion = await openai.chat.completions.create({
+      model: process.env.OPENAI_COVER_LETTER_MODEL || "gpt-4.1-mini",
+      temperature: 0.7,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You write accurate, tailored and professional UK cover letters. Never invent candidate information.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    });
 
-      if (
-        error.status !== undefined &&
-        error.status >= 500
-      ) {
-        return jsonError(
-          "The AI service is temporarily unavailable.",
-          502,
-        );
-      }
-    }
+    const rawContent =
+      completion.choices[0]?.message?.content;
 
-    return jsonError(
-      "Failed to generate cover letter.",
-      500,
+    const result = normalizeCoverLetterResponse({
+      rawContent,
+      companyName: body.companyName,
+      hiringManagerName: body.hiringManagerName,
+      jobTitle: body.jobTitle,
+      tone: body.tone,
+      length: body.length,
+    });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("AI cover letter generation failed:", error);
+
+    const details =
       error instanceof Error
         ? error.message
-        : "An unexpected server error occurred.",
+        : "Unknown server error.";
+
+    return NextResponse.json<CoverLetterApiError>(
+      {
+        error: "Failed to generate the cover letter.",
+        details,
+      },
+      {
+        status: 500,
+      },
     );
-  } finally {
-    if (quotaConsumed && !operationSucceeded) {
-      await safelyReleaseUsage();
-    }
   }
 }
