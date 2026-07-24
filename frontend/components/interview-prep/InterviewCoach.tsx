@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import type {
   EvaluateInterviewAnswerResponse,
@@ -10,8 +11,20 @@ import type {
   InterviewSession,
 } from "@/lib/interview-prep/types";
 import { useInterviewPrep } from "@/lib/interview-prep/useInterviewPrep";
+import { useJobTracker } from "@/lib/job-tracker/useJobTracker";
 
 export default function InterviewCoach() {
+  const searchParams = useSearchParams();
+
+  const applicationId =
+    searchParams.get("applicationId");
+
+  const {
+    applications,
+    updateApplication,
+    isLoaded: isJobTrackerLoaded,
+  } = useJobTracker();
+
   const {
     sessions,
     selectedSession,
@@ -42,7 +55,45 @@ export default function InterviewCoach() {
   >(null);
   const [error, setError] = useState("");
 
+  const hasPrefilledApplication = useRef(false);
 
+  const linkedApplication = useMemo(
+    () =>
+      applicationId
+        ? applications.find(
+            (application) =>
+              application.id === applicationId,
+          ) ?? null
+        : null,
+    [applicationId, applications],
+  );
+
+  useEffect(() => {
+    hasPrefilledApplication.current = false;
+  }, [applicationId]);
+
+  useEffect(() => {
+    if (
+      !applicationId ||
+      !isJobTrackerLoaded ||
+      !linkedApplication ||
+      hasPrefilledApplication.current
+    ) {
+      return;
+    }
+
+    setRole(linkedApplication.jobTitle);
+    setCompany(linkedApplication.companyName);
+    setJobDescription(
+      linkedApplication.jobDescription ?? "",
+    );
+
+    hasPrefilledApplication.current = true;
+  }, [
+    applicationId,
+    isJobTrackerLoaded,
+    linkedApplication,
+  ]);
 
   const activeQuestion =
     selectedSession?.questions[activeQuestionIndex] ?? null;
@@ -147,8 +198,18 @@ export default function InterviewCoach() {
         updatedAt: now,
       };
 
-      saveSession(session);
-      handleSelectSession(session.id);
+      const savedSession = saveSession(session);
+
+      if (applicationId && linkedApplication) {
+        await updateApplication(applicationId, {
+          jobDescription:
+            jobDescription.trim(),
+          interviewSessionId:
+            savedSession.id,
+        });
+      }
+
+      handleSelectSession(savedSession.id);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error

@@ -159,6 +159,11 @@ export default function DashboardPage() {
     averageAtsScore,
     savedAtsAnalysisCount,
     bestMatchScore,
+    tailoredResumeCount,
+    interviewSessionCount,
+    completedInterviewQuestions,
+    averageInterviewScore,
+    bestInterviewScore,
     profileStrength,
     interviewRate,
     offerRate,
@@ -248,7 +253,7 @@ export default function DashboardPage() {
             </div>
           ) : null}
 
-          <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-7">
             <MetricCard
               title="Applications"
               value={metrics.applications.value.toString()}
@@ -296,6 +301,22 @@ export default function DashboardPage() {
               )}
               icon={TrendingUp}
               href="/job-matching"
+            />
+
+            <MetricCard
+              title="Tailored resumes"
+              value={tailoredResumeCount.toString()}
+              change="AI optimised CV versions"
+              icon={FileCheck2}
+              href="/resume-tailor"
+            />
+
+            <MetricCard
+              title="Interview sessions"
+              value={interviewSessionCount.toString()}
+              change={`${completedInterviewQuestions} answers completed`}
+              icon={MessageSquareText}
+              href="/interview-prep"
             />
           </section>
 
@@ -579,6 +600,48 @@ export default function DashboardPage() {
                 }
                 interviewCount={metrics.interviews.value}
               />
+            </div>
+          </section>
+
+          <section className="mt-6">
+            <div className="rounded-[28px] border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    Interview readiness
+                  </h2>
+
+                  <p className="mt-1 text-sm text-white/40">
+                    Performance from your completed AI interview practice.
+                  </p>
+                </div>
+
+                <MessageSquareText
+                  size={20}
+                  className="text-violet-300"
+                />
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                <InsightCard
+                  label="Sessions"
+                  value={interviewSessionCount.toString()}
+                />
+
+                <InsightCard
+                  label="Average score"
+                  value={`${averageInterviewScore}%`}
+                />
+
+                <InsightCard
+                  label="Best score"
+                  value={`${bestInterviewScore}%`}
+                />
+              </div>
+
+              <p className="mt-5 text-sm text-white/45">
+                Completed answers: {completedInterviewQuestions}
+              </p>
             </div>
           </section>
 

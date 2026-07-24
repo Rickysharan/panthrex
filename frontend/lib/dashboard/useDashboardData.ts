@@ -9,6 +9,8 @@ import type {
 import { useJobTracker } from "@/lib/job-tracker/useJobTracker";
 import { useJobMatching } from "@/lib/job-matching/useJobMatching";
 import { useAtsScoreHistory } from "@/lib/ats-score/useAtsScoreHistory";
+import { useResumeTailor } from "@/lib/resume-tailor/useResumeTailor";
+import { useInterviewPrep } from "@/lib/interview-prep/useInterviewPrep";
 import { createClient } from "@/lib/supabase/client";
 
 export type DashboardUserProfile = {
@@ -461,6 +463,15 @@ export function useDashboardData() {
     isLoaded: isJobMatchingLoaded,
   } = useJobMatching();
 
+  const {
+    sessions: tailorSessions,
+  } = useResumeTailor();
+
+  const {
+    sessions: interviewSessions,
+    isLoaded: isInterviewLoaded,
+  } = useInterviewPrep();
+
   useEffect(() => {
     const supabase = createClient();
     let isMounted = true;
@@ -526,6 +537,41 @@ export function useDashboardData() {
 
   const bestMatchScore =
     bestMatch?.result.overallScore ?? 0;
+
+  const interviewFeedbackScores =
+    interviewSessions.flatMap((session) =>
+      session.questions
+        .map((question) => question.feedback?.score)
+        .filter(
+          (score): score is number =>
+            typeof score === "number",
+        ),
+    );
+
+  const averageInterviewScore =
+    interviewFeedbackScores.length === 0
+      ? 0
+      : Math.round(
+          interviewFeedbackScores.reduce(
+            (total, score) => total + score,
+            0,
+          ) / interviewFeedbackScores.length,
+        );
+
+  const bestInterviewScore =
+    interviewFeedbackScores.length === 0
+      ? 0
+      : Math.max(...interviewFeedbackScores);
+
+  const completedInterviewQuestions =
+    interviewSessions.reduce(
+      (total, session) =>
+        total +
+        session.questions.filter(
+          (question) => question.completed,
+        ).length,
+      0,
+    );
 
   const recentApplications = useMemo(
     () => sortApplications(applications).slice(0, 5),
@@ -644,7 +690,8 @@ export function useDashboardData() {
     isProfileLoading ||
     !isJobTrackerLoaded ||
     !isAtsHistoryLoaded ||
-    !isJobMatchingLoaded;
+    !isJobMatchingLoaded ||
+    !isInterviewLoaded;
 
   return {
     profile,
@@ -688,6 +735,18 @@ export function useDashboardData() {
     averageMatchScore,
     bestMatchScore,
     savedMatchCount: savedMatches.length,
+
+    tailoredResumeCount:
+      tailorSessions.length,
+
+    interviewSessionCount:
+      interviewSessions.length,
+
+    completedInterviewQuestions,
+
+    averageInterviewScore,
+
+    bestInterviewScore,
 
     profileStrength,
     interviewRate,
