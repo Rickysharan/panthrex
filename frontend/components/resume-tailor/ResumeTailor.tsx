@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   useRouter,
   useSearchParams,
@@ -44,33 +44,20 @@ export default function ResumeTailor() {
     selectedSession,
   } = useResumeTailor();
 
-  const [targetRole, setTargetRole] = useState("");
-  const [company, setCompany] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
+  const [targetRole, setTargetRole] = useState(
+    () => linkedApplication?.jobTitle ?? "",
+  );
+
+  const [company, setCompany] = useState(
+    () => linkedApplication?.companyName ?? "",
+  );
+
+  const [jobDescription, setJobDescription] = useState(
+    () => linkedApplication?.jobDescription ?? "",
+  );
+
   const [hasAppliedResume, setHasAppliedResume] =
     useState(false);
-
-  const [hasInitialisedApplication, setHasInitialisedApplication] =
-    useState(false);
-
-  useEffect(() => {
-    if (
-      hasInitialisedApplication ||
-      !linkedApplication
-    ) {
-      return;
-    }
-
-    setTargetRole(linkedApplication.jobTitle);
-    setCompany(linkedApplication.companyName);
-    setJobDescription(
-      linkedApplication.jobDescription ?? "",
-    );
-    setHasInitialisedApplication(true);
-  }, [
-    hasInitialisedApplication,
-    linkedApplication,
-  ]);
 
   async function handleSubmit() {
     const normalizedTargetRole = targetRole.trim();

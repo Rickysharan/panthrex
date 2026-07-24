@@ -38,6 +38,7 @@ import "./print.css";
 
 export default function ResumeBuilderPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [enhancementError, setEnhancementError] =
     useState("");
@@ -367,6 +368,7 @@ export default function ResumeBuilderPage() {
 
                 <button
                   type="button"
+                  onClick={() => setPreviewOpen(true)}
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
                 >
                   <Eye size={17} />
@@ -569,6 +571,36 @@ export default function ResumeBuilderPage() {
           </div>
         </div>
       </main>
+
+      {previewOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="relative flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#050816] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  Resume Preview
+                </h2>
+
+                <p className="text-sm text-white/40">
+                  Final resume view
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70 transition hover:bg-white/10 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto bg-white p-6">
+              <ResumePreview resumeData={resumeData} />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="resume-print-root">
         <ResumePreview

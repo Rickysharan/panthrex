@@ -121,31 +121,25 @@ function getStatusClasses(
 export default function ResumeEnhancerPage() {
   const router = useRouter();
 
-  const [enhancementData, setEnhancementData] =
-    useState<ResumeEnhancementResponse | null>(null);
+  const initialEnhancementState =
+    loadInitialEnhancementState();
 
-  const [error, setError] = useState("");
+  const [enhancementData, setEnhancementData] =
+    useState<ResumeEnhancementResponse | null>(
+      initialEnhancementState.enhancementData,
+    );
+
+  const [error, setError] =
+    useState(initialEnhancementState.error);
 
   const [storageLoaded, setStorageLoaded] =
-    useState(false);
+    useState(true);
 
   const [copiedSuggestionId, setCopiedSuggestionId] =
     useState<string | null>(null);
 
   const [copiedAll, setCopiedAll] =
     useState(false);
-
-  useEffect(() => {
-    const initialState =
-      loadInitialEnhancementState();
-
-    setEnhancementData(
-      initialState.enhancementData,
-    );
-
-    setError(initialState.error);
-    setStorageLoaded(true);
-  }, []);
 
   useEffect(() => {
     if (!storageLoaded || !enhancementData) {

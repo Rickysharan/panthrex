@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, LoaderCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type BillingInterval = "month" | "year";
@@ -74,6 +75,7 @@ const plans: Plan[] = [
 ];
 
 export default function Pricing() {
+  const router = useRouter();
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("month");
   const [loadingPlan, setLoadingPlan] =
@@ -105,7 +107,7 @@ export default function Pricing() {
           `/#pricing`,
         );
 
-        window.location.href = `/login?next=${nextLocation}`;
+        router.push(`/login?next=${nextLocation}`);
         return;
       }
 
@@ -152,7 +154,7 @@ export default function Pricing() {
           "/#pricing",
         );
 
-        window.location.href = `/login?next=${nextLocation}`;
+        router.push(`/login?next=${nextLocation}`);
         return;
       }
 
@@ -196,12 +198,14 @@ export default function Pricing() {
     }
 
     if (planName === "Free") {
-      window.location.href = "/signup";
+      router.push("/signup");
       return;
     }
 
-    window.location.href =
-      "mailto:support@panthrex.com?subject=Panthrex%20Teams%20Enquiry";
+    window.open(
+      "mailto:support@panthrex.com?subject=Panthrex%20Teams%20Enquiry",
+      "_self",
+    );
   }
 
   function getButtonLabel(

@@ -205,9 +205,10 @@ export default function AppLayout({
         data: {
           user,
         },
+        error,
       } = await supabase.auth.getUser();
 
-      if (!user) {
+      if (error || !user) {
         return;
       }
 
@@ -948,6 +949,7 @@ function SidebarContent({
 
             return (
               <Link
+                id={`${item.id}-nav`}
                 key={item.href}
                 href={item.href}
                 onClick={onNavigate}

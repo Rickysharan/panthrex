@@ -1,6 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  X,
+} from "lucide-react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 type ProductTourProps = {
   onComplete: () => void;
@@ -8,39 +16,40 @@ type ProductTourProps = {
 
 const tourSteps = [
   {
-    title: "Welcome to Panthrex 🚀",
+    target: "dashboard-nav",
+    title: "Your Dashboard 🚀",
     description:
-      "Your AI career platform for resumes, job search, applications and interview preparation.",
+      "Track your career progress, profile strength and recent activity here.",
   },
   {
-    title: "Dashboard",
+    target: "resume-builder-nav",
+    title: "Build your Resume",
     description:
-      "Track your career progress, profile strength, tasks and recent activity from one place.",
+      "Create ATS-friendly resumes and prepare professional applications.",
   },
   {
-    title: "Resume Tools",
+    target: "ats-score-nav",
+    title: "ATS Resume Score",
     description:
-      "Build ATS-friendly resumes, import existing CVs and improve your content using AI.",
+      "Check your resume compatibility before applying.",
   },
   {
-    title: "ATS Score",
-    description:
-      "Analyse your resume compatibility and discover improvements before applying.",
-  },
-  {
+    target: "job-search-nav",
     title: "AI Job Search",
     description:
       "Find relevant roles and organise your job search workflow.",
   },
   {
+    target: "interview-prep-nav",
     title: "Interview Coach",
     description:
-      "Practise technical and behavioural interviews with AI assistance.",
+      "Practice technical and behavioural interviews with AI.",
   },
   {
-    title: "Referrals & Account",
+    target: "settings-nav",
+    title: "Account & Plans",
     description:
-      "Invite friends, manage your plan, subscription and account settings.",
+      "Manage your profile, subscription and settings.",
   },
 ];
 
@@ -49,28 +58,113 @@ export default function ProductTour({
 }: ProductTourProps) {
   const [step, setStep] = useState(0);
 
+  const [position, setPosition] =
+    useState({
+      top: 300,
+      left: 320,
+    });
+
   const current = tourSteps[step];
 
+  useEffect(() => {
+    const element =
+      document.getElementById(
+        current.target,
+      );
+
+    if (!element) {
+      return;
+    }
+
+    element.classList.add(
+      "tour-highlight",
+    );
+
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    requestAnimationFrame(() => {
+      const rect =
+        element.getBoundingClientRect();
+
+      setPosition({
+        top: rect.top + window.scrollY,
+        left: rect.right + 20,
+      });
+    });
+
+    return () => {
+      element.classList.remove(
+        "tour-highlight",
+      );
+    };
+  }, [current]);
+
+  function next() {
+    if (
+      step === tourSteps.length - 1
+    ) {
+      onComplete();
+      return;
+    }
+
+    setStep((value) => value + 1);
+  }
+
+  function previous() {
+    setStep((value) =>
+      Math.max(0, value - 1),
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0b0e1d] p-8 shadow-2xl">
+    <>
+      <div className="fixed inset-0 z-[110] bg-black/30" />
+
+      <div
+        className="fixed z-[120] w-80 rounded-3xl
+        border border-indigo-400/30
+        bg-[#0b0e1d]/95 p-6 shadow-2xl
+        backdrop-blur-xl"
+        style={{
+          top: position.top,
+          left: position.left,
+        }}
+      >
+        <div
+          className="absolute -left-3 top-8
+          h-6 w-6 rotate-45
+          border-l border-b
+          border-indigo-400/30
+          bg-[#0b0e1d]"
+        />
+
+        <button
+          onClick={onComplete}
+          className="absolute right-4 top-4 text-white/40 hover:text-white"
+        >
+          <X size={18} />
+        </button>
+
         <p className="text-xs uppercase tracking-widest text-indigo-300">
           Panthrex Tour {step + 1}/{tourSteps.length}
         </p>
 
-        <h2 className="mt-4 text-2xl font-bold text-white">
+        <h2 className="mt-3 text-xl font-bold">
           {current.title}
         </h2>
 
-        <p className="mt-4 leading-6 text-white/60">
+        <p className="mt-3 text-sm text-white/60">
           {current.description}
         </p>
 
-        <div className="mt-6 flex gap-2">
+        <div className="mt-5 flex gap-2">
           {tourSteps.map((_, index) => (
             <span
               key={index}
-              className={`h-2 flex-1 rounded-full ${
+              className={`h-1.5 flex-1 rounded-full ${
                 index === step
                   ? "bg-indigo-400"
                   : "bg-white/10"
@@ -79,22 +173,32 @@ export default function ProductTour({
           ))}
         </div>
 
-        <button
-          onClick={() => {
-            if (step === tourSteps.length - 1) {
-              onComplete();
-              return;
-            }
+        <div className="mt-6 flex gap-3">
+          {step > 0 && (
+            <button
+              onClick={previous}
+              className="flex-1 rounded-xl border border-white/10 py-3"
+            >
+              <ArrowLeft size={16} className="inline mr-2" />
+              Back
+            </button>
+          )}
 
-            setStep((value) => value + 1);
-          }}
-          className="mt-8 w-full rounded-xl bg-indigo-500 px-4 py-3 font-semibold text-white hover:bg-indigo-400"
-        >
-          {step === tourSteps.length - 1
-            ? "Finish Tour"
-            : "Continue"}
-        </button>
+          <button
+            onClick={next}
+            className="flex-1 rounded-xl bg-indigo-500 py-3 font-semibold"
+          >
+            {step === tourSteps.length - 1
+              ? "Finish"
+              : "Next"}
+
+            <ArrowRight
+              size={16}
+              className="inline ml-2"
+            />
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

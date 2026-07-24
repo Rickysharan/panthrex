@@ -742,10 +742,10 @@ function ToggleRow({
         aria-checked={checked}
         aria-label={title}
         onClick={() => onChange(!checked)}
-        className={`relative h-7 w-12 shrink-0 rounded-full transition ${
+        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${
           checked
             ? "bg-violet-500"
-            : "bg-white/10"
+            : "bg-white/20"
         }`}
       >
         <span

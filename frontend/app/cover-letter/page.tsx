@@ -268,7 +268,9 @@ function CoverLetterPageContent() {
         );
 
       if (storedLetter) {
-        setGeneratedLetter(storedLetter);
+        window.setTimeout(() => {
+          setGeneratedLetter(storedLetter);
+        }, 0);
       }
     }
 
