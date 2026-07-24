@@ -206,9 +206,9 @@ export function useAtsScoreHistory() {
     }, []);
 
   const saveAnalysis = useCallback(
-    (
+    async (
       input: SaveAtsAnalysisInput,
-    ): SavedAtsAnalysis => {
+    ): Promise<SavedAtsAnalysis> => {
       const timestamp =
         new Date().toISOString();
 
@@ -244,31 +244,29 @@ export function useAtsScoreHistory() {
         temporaryAnalysis.id,
       );
 
-      void createAtsAnalysis({
-        title: temporaryAnalysis.title,
-        company:
-          temporaryAnalysis.company,
-        jobDescription:
-          temporaryAnalysis.jobDescription,
-        resumeName:
-          temporaryAnalysis.resumeName,
-        result: temporaryAnalysis.result,
-      })
-        .then((createdAnalysis) => {
-          if (!isMountedRef.current) {
-            return;
-          }
+      try {
+        const createdAnalysis =
+          await createAtsAnalysis({
+            title: temporaryAnalysis.title,
+            company:
+              temporaryAnalysis.company,
+            jobDescription:
+              temporaryAnalysis.jobDescription,
+            resumeName:
+              temporaryAnalysis.resumeName,
+            result: temporaryAnalysis.result,
+          });
 
+        if (isMountedRef.current) {
           replaceAnalysis(
             temporaryAnalysis.id,
             createdAnalysis,
           );
-        })
-        .catch((caughtError: unknown) => {
-          if (!isMountedRef.current) {
-            return;
-          }
+        }
 
+        return createdAnalysis;
+      } catch (caughtError: unknown) {
+        if (isMountedRef.current) {
           removeAnalysisFromState(
             temporaryAnalysis.id,
           );
@@ -279,9 +277,10 @@ export function useAtsScoreHistory() {
               : "Unable to save ATS analysis.";
 
           setError(message);
-        });
+        }
 
-      return temporaryAnalysis;
+        throw caughtError;
+      }
     },
     [
       removeAnalysisFromState,
@@ -450,9 +449,9 @@ export function useAtsScoreHistory() {
   );
 
   const duplicateAnalysis = useCallback(
-    (
+    async (
       id: string,
-    ): SavedAtsAnalysis | null => {
+    ): Promise<SavedAtsAnalysis | null> => {
       const sourceAnalysis =
         savedAnalyses.find(
           (analysis) => analysis.id === id,

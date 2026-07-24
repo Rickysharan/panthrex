@@ -20,10 +20,15 @@ import {
     XCircle,
 } from "lucide-react";
 import {
+    Suspense,
     type ReactNode,
+    useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react";
+
+import { useSearchParams } from "next/navigation";
 
 import AtsScoreHistorySection from "@/components/ats-score/AtsScoreHistorySection";
 import AppLayout from "@/components/layout/AppLayout";
@@ -40,10 +45,35 @@ import type {
 } from "@/lib/ats-score/types";
 import { useAtsScore } from "@/lib/ats-score/useAtsScore";
 import type { SavedAtsAnalysis } from "@/lib/ats-score/useAtsScoreHistory";
+import { useJobTracker } from "@/lib/job-tracker/useJobTracker";
 import { useResumeBuilder } from "@/lib/resume/useResumeBuilder";
 
-export default function AtsScorePage() {
+function AtsScorePageContent() {
+    const searchParams = useSearchParams();
+
+    const applicationId =
+        searchParams.get("applicationId");
+
     const { resumeData } = useResumeBuilder();
+
+    const {
+        applications,
+        updateApplication,
+        isLoaded: isJobTrackerLoaded,
+    } = useJobTracker();
+
+    const linkedApplication = useMemo(
+        () =>
+            applicationId
+                ? applications.find(
+                      (application) =>
+                          application.id === applicationId,
+                  ) ?? null
+                : null,
+        [applicationId, applications],
+    );
+
+    const hasPrefilledApplication = useRef(false);
 
     const {
         result,
@@ -61,6 +91,29 @@ export default function AtsScorePage() {
 
     const [jobDescription, setJobDescription] =
         useState("");
+
+    useEffect(() => {
+        hasPrefilledApplication.current = false;
+    }, [applicationId]);
+
+    useEffect(() => {
+        if (
+            !isJobTrackerLoaded ||
+            !linkedApplication ||
+            hasPrefilledApplication.current
+        ) {
+            return;
+        }
+
+        setJobDescription(
+            linkedApplication.jobDescription ?? "",
+        );
+
+        hasPrefilledApplication.current = true;
+    }, [
+        isJobTrackerLoaded,
+        linkedApplication,
+    ]);
 
     const characterCount = jobDescription.length;
 
@@ -93,6 +146,20 @@ export default function AtsScorePage() {
     ): void {
         setJobDescription(analysis.jobDescription);
         loadResult(analysis.result);
+    }
+
+    async function handleAnalysisSaved(
+        analysis: SavedAtsAnalysis,
+    ): Promise<void> {
+        if (!applicationId || !linkedApplication) {
+            return;
+        }
+
+        await updateApplication(applicationId, {
+            jobDescription:
+                jobDescription.trim(),
+            atsAnalysisId: analysis.id,
+        });
     }
 
     return (
@@ -298,10 +365,33 @@ export default function AtsScorePage() {
                         jobDescription={jobDescription}
                         resumeName={resumeName}
                         onLoadAnalysis={handleLoadAnalysis}
+                        onAnalysisSaved={handleAnalysisSaved}
                     />
                 </div>
             </div>
         </AppLayout>
+    );
+}
+
+export default function AtsScorePage() {
+    return (
+        <Suspense
+            fallback={
+                <AppLayout
+                    title="ATS Resume Score"
+                    description="Analyse your resume against a vacancy and identify the changes most likely to improve ATS alignment."
+                >
+                    <div className="flex min-h-[60vh] items-center justify-center">
+                        <LoaderCircle
+                            size={28}
+                            className="animate-spin text-indigo-300"
+                        />
+                    </div>
+                </AppLayout>
+            }
+        >
+            <AtsScorePageContent />
+        </Suspense>
     );
 }
 

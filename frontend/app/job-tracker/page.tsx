@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import JobApplicationForm from "@/components/job-tracker/JobApplicationForm";
@@ -449,6 +450,13 @@ export default function JobTrackerPage() {
                       Open job listing
                     </a>
                   ) : null}
+
+                  <Link
+                    href={`/ats-score?applicationId=${selectedApplication.id}`}
+                    className="block w-full rounded-xl bg-indigo-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-indigo-500"
+                  >
+                    Run ATS Score
+                  </Link>
 
                   <button
                     type="button"

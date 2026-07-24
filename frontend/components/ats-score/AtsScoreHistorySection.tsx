@@ -21,6 +21,9 @@ type AtsScoreHistorySectionProps = {
   onLoadAnalysis: (
     analysis: SavedAtsAnalysis,
   ) => void;
+  onAnalysisSaved?: (
+    analysis: SavedAtsAnalysis,
+  ) => void | Promise<void>;
 };
 
 export default function AtsScoreHistorySection({
@@ -28,6 +31,7 @@ export default function AtsScoreHistorySection({
   jobDescription,
   resumeName,
   onLoadAnalysis,
+  onAnalysisSaved,
 }: AtsScoreHistorySectionProps) {
   const {
     savedAnalyses,
@@ -55,26 +59,32 @@ export default function AtsScoreHistorySection({
     result !== null &&
     jobDescription.trim().length >= 50;
 
-  function handleSave(): void {
+  async function handleSave(): Promise<void> {
     if (!result || !canSave) {
       return;
     }
 
-    saveAnalysis({
-      title:
-        jobTitle.trim() ||
-        "ATS resume analysis",
-      company,
-      jobDescription,
-      resumeName,
-      result,
-    });
+    try {
+      const savedAnalysis = await saveAnalysis({
+        title:
+          jobTitle.trim() ||
+          "ATS resume analysis",
+        company,
+        jobDescription,
+        resumeName,
+        result,
+      });
 
-    setSavedConfirmation(true);
+      await onAnalysisSaved?.(savedAnalysis);
 
-    window.setTimeout(() => {
+      setSavedConfirmation(true);
+
+      window.setTimeout(() => {
+        setSavedConfirmation(false);
+      }, 2500);
+    } catch {
       setSavedConfirmation(false);
-    }, 2500);
+    }
   }
 
   function handleSelect(
@@ -94,9 +104,11 @@ export default function AtsScoreHistorySection({
     });
   }
 
-  function handleDuplicate(id: string): void {
+  async function handleDuplicate(
+    id: string,
+  ): Promise<void> {
     const duplicatedAnalysis =
-      duplicateAnalysis(id);
+      await duplicateAnalysis(id);
 
     if (!duplicatedAnalysis) {
       return;
